@@ -1,0 +1,1254 @@
+import os
+import shutil
+import json
+import re  # ✅ 1. 重新引入 re 库
+# ✅ 1. 引入 docx 库
+import docx  
+from typing import List
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+import fitz  # PyMuPDF
+import httpx  # ✅ 引入 httpx 用于异步请求 Qdrant
+import networkx as nx # ✅ 引入 networkx 用于处理 GraphML
+# 引入数据库依赖
+from app.database import get_db, DocumentModel, SessionLocal
+from app.rag.engine import get_rag_engine, QueryParam
+
+router = APIRouter()
+rag_engine = None
+
+# ===========================
+# 1. 初始化与工具函数
+# ===========================
+async def init_rag_engine():
+    global rag_engine
+    print("🔄 [System] 正在加载 LightRAG 引擎...")
+    rag_engine = get_rag_engine()
+    try:
+        await rag_engine.initialize_storages()
+        print("✅ [System] 存储层 (Storage) 初始化成功！")
+    except Exception as e:
+        print(f"❌ [System] 存储层初始化失败: {e}")
+    print("✅ [System] 引擎加载完成！")
+
+async def parse_file_content(file: UploadFile) -> str:
+    content = ""
+    temp_filename = f"temp_{file.filename}"
+    with open(temp_filename, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    try:
+        # 👉 情况 1: PDF
+        if file.filename.endswith(".pdf"):
+            doc = fitz.open(temp_filename)
+            try:
+                for page in doc:
+                    content += page.get_text()
+            finally:
+                doc.close()
+        
+        # 👉 情况 2: TXT / MD
+        elif file.filename.endswith(".txt") or file.filename.endswith(".md"):
+            with open(temp_filename, "r", encoding="utf-8") as f:
+                content = f.read()
+
+        # 👉 情况 3: DOCX (✅ 这就是你之前缺少的！)
+        elif file.filename.endswith(".docx"):
+            try:
+                doc = docx.Document(temp_filename)
+                # 提取每一段的文字并拼接
+                content = "\n".join([para.text for para in doc.paragraphs])
+            except Exception as e:
+                print(f"❌ 解析 DOCX 失败: {e}")
+
+    finally:
+        if os.path.exists(temp_filename):
+            try:
+                os.remove(temp_filename)
+            except:
+                pass
+    return content
+
+# ===========================
+# 🕒 后台处理函数
+# ===========================
+async def process_doc_background(text_content: str, filename: str):
+    print(f"🔄 [Background] 开始处理文档: {filename}")
+    db = SessionLocal()
+    try:
+        doc = db.query(DocumentModel).filter(DocumentModel.filename == filename).first()
+        if not doc:
+            print(f"⚠️ [Background] 数据库中未找到文档记录: {filename}")
+            return
+        doc.status = "indexing"
+        db.commit()
+
+        if rag_engine:
+            await rag_engine.ainsert(text_content, file_paths=[filename])
+            print(f"✅ [Background] 文档插入 LightRAG 成功: {filename}")
+            doc.status = "completed"
+            db.commit()
+        else:
+            doc.status = "failed"
+            db.commit()
+    except Exception as e:
+        print(f"❌ [Background] 处理文档失败: {str(e)}")
+        try:
+            db.rollback()
+            doc = db.query(DocumentModel).filter(DocumentModel.filename == filename).first()
+            if doc:
+                doc.status = "failed"
+                db.commit()
+        except:
+            pass
+    finally:
+        db.close()
+
+# ===========================
+# 2. 定义数据模型
+# ===========================
+class DocResponse(BaseModel):
+    id: int
+    filename: str
+    upload_time: str
+    file_size: str
+    status: str
+
+class ChatRequest(BaseModel):
+    query: str
+    mode: str = "hybrid"
+
+class Source(BaseModel):
+    id: int
+    content: str
+    content_full: str
+    highlight_terms: List[str]
+    source_filename: str
+    score: float
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: List[Source]
+
+# ===========================
+# 3. 核心接口
+# ===========================
+
+@router.get("/documents", response_model=List[DocResponse], summary="获取文件列表")
+def get_documents(db: Session = Depends(get_db)):
+    docs = db.query(DocumentModel).order_by(DocumentModel.upload_time.desc()).all()
+    return [
+        DocResponse(
+            id=d.id,
+            filename=d.filename,
+            upload_time=d.upload_time.strftime("%Y-%m-%d %H:%M"),
+            file_size=d.file_size,
+            status=d.status
+        )
+        for d in docs
+    ]
+
+@router.post("/upload", summary="上传文件")
+async def upload_document(
+    background_tasks: BackgroundTasks, 
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db)
+):
+    if not rag_engine:
+        raise HTTPException(status_code=500, detail="RAG 引擎未初始化")
+
+    file.file.seek(0, 2)
+    size_mb = f"{file.file.tell() / 1024 / 1024:.2f} MB"
+    file.file.seek(0)
+
+    # 解析文件内容
+    text_content = await parse_file_content(file)
+    
+    # 检查文件内容是否为空
+    if not text_content.strip():
+        print(f"⚠️ 文件内容为空或格式不支持: {file.filename}")
+        return {"message": "空文件或格式不支持"}
+
+    # 检查文档是否已存在
+    existing_doc = db.query(DocumentModel).filter(DocumentModel.filename == file.filename).first()
+    if not existing_doc:
+        # 创建新文档，状态直接设为 indexing（索引中）
+        new_doc = DocumentModel(
+            filename=file.filename,
+            file_size=size_mb,
+            status="indexing"
+        )
+        db.add(new_doc)
+        db.commit()
+    else:
+        # 更新现有文档，状态设为 indexing
+        existing_doc.status = "indexing"
+        existing_doc.file_size = size_mb
+        db.commit()
+
+    # 添加后台任务处理文档
+    background_tasks.add_task(process_doc_background, text_content, file.filename)
+
+    # 立即返回，不等待处理完成
+    return {"message": "上传已开始，后台处理中...", "status": "indexing", "filename": file.filename}
+
+@router.delete("/documents/all", summary="删除所有文档")
+async def delete_all_documents(db: Session = Depends(get_db)):
+    print(f"🗑️ [DeleteAll] 准备删除所有文档...")
+    
+    # 第一步：获取所有文档的文件名
+    docs = db.query(DocumentModel).all()
+    filenames = [doc.filename for doc in docs]
+    
+    if not filenames:
+        print(f"⚠️ [DeleteAll] 没有文档需要删除")
+        return {"message": "没有文档需要删除", "deleted_count": 0}
+    
+    print(f"📋 [DeleteAll] 找到 {len(filenames)} 个文档需要删除: {filenames}")
+    
+    # 第二步：配置 Qdrant 连接信息
+    qdrant_url = "http://YOUR_SERVER_IP:6333"
+    qdrant_api_key = "YOUR_PASSWORD_PLACEHOLDER"
+    
+    # LightRAG 默认使用这三个集合来存储不同类型的数据
+    collection_names = [
+        "lightrag_vdb_entities",      # 实体向量
+        "lightrag_vdb_relationships",  # 关系向量
+        "lightrag_vdb_chunks"          # 文本块向量
+    ]
+    
+    print(f"🎯 [DeleteAll] 将从以下集合中删除所有数据: {', '.join(collection_names)}")
+    
+    # 第三步：尝试从 Qdrant 的三个集合中删除所有向量数据
+    total_deleted_collections = 0
+    
+    for collection_name in collection_names:
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # 构造 Qdrant 删除请求的 URL
+                delete_url = f"{qdrant_url}/collections/{collection_name}/points/delete"
+                
+                # 删除所有点（不设置筛选条件）
+                print(f"📤 [DeleteAll] 正在清空 Qdrant 集合 '{collection_name}'...")
+                print(f"📤 [DeleteAll] URL: {delete_url}")
+                
+                # 发送异步 POST 请求，删除所有点
+                response = await client.post(
+                    delete_url,
+                    headers={
+                        "api-key": qdrant_api_key,
+                        "Content-Type": "application/json"
+                    },
+                    json={"filter": {}}  # 使用空 filter 表示匹配所有点
+                )
+                
+                # 打印响应状态
+                print(f"📥 [DeleteAll] 集合 '{collection_name}' 响应状态码: {response.status_code}")
+                
+                if response.status_code == 200:
+                    print(f"✅ [DeleteAll] 集合 '{collection_name}' 所有向量数据删除成功！")
+                    print(f"📊 [DeleteAll] 响应内容: {response.text}")
+                    total_deleted_collections += 1
+                else:
+                    print(f"⚠️ [DeleteAll] 集合 '{collection_name}' 删除响应异常，状态码: {response.status_code}")
+                    print(f"⚠️ [DeleteAll] 响应内容: {response.text}")
+                    
+        except httpx.TimeoutException:
+            print(f"❌ [DeleteAll] 集合 '{collection_name}' 删除请求超时！")
+        except httpx.ConnectError:
+            print(f"❌ [DeleteAll] 集合 '{collection_name}' 连接失败！请检查网络或服务器地址。URL: {qdrant_url}")
+        except Exception as e:
+            print(f"❌ [DeleteAll] 集合 '{collection_name}' 删除过程中发生异常: {str(e)}")
+    
+    print(f"📊 [DeleteAll] Qdrant 删除完成，成功清空 {total_deleted_collections}/{len(collection_names)} 个集合")
+    
+    # 第四步：清理本地文件 (Surgical Cleanup - Total Wipeout)
+    print(f"🧹 [DeleteAll] 正在清理本地存储文件...")
+    data_dir = "./data"
+    deleted_files_count = 0
+    
+    try:
+        # 列出并删除 data 目录下的所有 json 和 graphml 文件
+        if os.path.exists(data_dir):
+            for filename in os.listdir(data_dir):
+                file_path = os.path.join(data_dir, filename)
+                # 确保是文件且是 LightRAG 的存储文件
+                if os.path.isfile(file_path) and (filename.endswith(".json") or filename.endswith(".graphml")):
+                    try:
+                        os.remove(file_path)
+                        deleted_files_count += 1
+                        print(f"   🗑️ 已删除本地文件: {filename}")
+                    except Exception as e:
+                        print(f"   ❌ 删除文件失败 {filename}: {str(e)}")
+        else:
+             print(f"⚠️ [DeleteAll] 数据目录不存在: {data_dir}")
+
+    except Exception as e:
+        print(f"❌ [DeleteAll] 本地文件清理过程中发生异常: {str(e)}")
+    
+    print(f"✅ [DeleteAll] 本地文件清理完成！共删除 {deleted_files_count} 个文件")
+
+    # 第五步：删除 MySQL 中的所有文档记录
+    print(f"🗃️ [DeleteAll] 正在从 MySQL 删除所有文档记录...")
+    deleted_count = db.query(DocumentModel).delete()
+    db.commit()
+    print(f"✅ [DeleteAll] MySQL 记录删除成功！共删除 {deleted_count} 条记录")
+    
+    # 提示重启
+    print(f"\n💡 [DeleteAll] 警告：全量删除操作已完成。将在后台触发热重载以刷新内存。")
+    try:
+        await init_rag_engine()
+        print(f"✅ [DeleteAll] 热重载完成！")
+    except Exception as e:
+        print(f"⚠️ [DeleteAll] 热重载失败: {str(e)}")
+    
+    return {"message": "删除成功", "deleted_count": deleted_count}
+
+@router.delete("/documents/{doc_id}", summary="删除文档")
+async def delete_document(doc_id: int, db: Session = Depends(get_db)):
+    # 第一步：根据 doc_id 查询 MySQL，拿到该文档的 filename
+    doc = db.query(DocumentModel).filter(DocumentModel.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="文档不存在")
+    
+    filename = doc.filename
+    print(f"🗑️ [Delete] 准备删除文档: {filename} (ID: {doc_id})")
+    
+    # Qdrant 连接信息
+    qdrant_url = "http://YOUR_SERVER_IP:6333"
+    qdrant_api_key = "YOUR_PASSWORD_PLACEHOLDER"
+    
+    # 定义集合名称
+    chunks_collection = "lightrag_vdb_chunks"
+    entities_collection = "lightrag_vdb_entities"
+    relationships_collection = "lightrag_vdb_relationships"
+    
+    print(f"🎯 [Delete] 集合配置:")
+    print(f"   - Chunks: {chunks_collection}")
+    print(f"   - Entities: {entities_collection}")
+    print(f"   - Relationships: {relationships_collection}")
+    
+    # ==========================================
+    # Step 1: 找线头 (Get Full Doc ID)
+    # ==========================================
+    print(f"\n🔍 [Step 1] 正在找线头 - 获取 Full Doc ID...")
+    print(f"📝 [Step 1] 筛选条件: file_path == '{filename}'")
+    
+    full_doc_id = None
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            scroll_url = f"{qdrant_url}/collections/{chunks_collection}/points/scroll"
+            
+            scroll_payload = {
+                "filter": {
+                    "must": [
+                        {
+                            "key": "file_path",
+                            "match": {
+                                "value": filename
+                            }
+                        }
+                    ]
+                },
+                "limit": 1,
+                "with_payload": True
+            }
+            
+            response = await client.post(
+                scroll_url,
+                headers={
+                    "api-key": qdrant_api_key,
+                    "Content-Type": "application/json"
+                },
+                json=scroll_payload
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                points = data.get("result", {}).get("points", [])
+                
+                if points:
+                    full_doc_id = points[0].get("payload", {}).get("full_doc_id")
+                    print(f"✅ [Step 1] 找到线头！Full Doc ID: {full_doc_id}")
+                else:
+                    print(f"⚠️ [Step 1] 未找到包含文件名的切片，文档可能未索引或已删除")
+            else:
+                print(f"⚠️ [Step 1] 查询失败，状态码: {response.status_code}")
+                print(f"⚠️ [Step 1] 响应内容: {response.text}")
+                
+    except Exception as e:
+        print(f"❌ [Step 1] 查询过程中发生异常: {str(e)}")
+    
+    if not full_doc_id:
+        print(f"⚠️ [Step 1] 无法获取 Full Doc ID，跳过 Qdrant 删除步骤")
+    else:
+        # ==========================================
+        # Step 2: 一锅端 (Find All Chunks by Doc ID)
+        # ==========================================
+        print(f"\n🔗 [Step 2] 正在一锅端 - 查找所有关联切片...")
+        print(f"📝 [Step 2] 筛选条件: full_doc_id == {full_doc_id}")
+        
+        all_point_ids = []
+        all_chunk_payload_ids = []
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                scroll_url = f"{qdrant_url}/collections/{chunks_collection}/points/scroll"
+                
+                scroll_payload = {
+                    "filter": {
+                        "must": [
+                            {
+                                "key": "full_doc_id",
+                                "match": {
+                                    "value": full_doc_id
+                                }
+                            }
+                        ]
+                    },
+                    "limit": 1000,
+                    "with_payload": True
+                }
+                
+                response = await client.post(
+                    scroll_url,
+                    headers={
+                        "api-key": qdrant_api_key,
+                        "Content-Type": "application/json"
+                    },
+                    json=scroll_payload
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    points = data.get("result", {}).get("points", [])
+                    
+                    all_point_ids = [str(point["id"]) for point in points]
+                    all_chunk_payload_ids = [point.get("payload", {}).get("id") for point in points if point.get("payload", {}).get("id")]
+                    
+                    print(f"✅ [Step 2] 查找完成！找到 {len(all_point_ids)} 个切片")
+                    print(f"🔗 [Step 2] 通过线头找到 Doc ID: {full_doc_id}，关联切片总数: {len(all_point_ids)}")
+                    print(f"🔍 [Step 2] Point IDs: {all_point_ids[:5]}{'...' if len(all_point_ids) > 5 else ''}")
+                    print(f"🔍 [Step 2] Payload IDs: {all_chunk_payload_ids[:5]}{'...' if len(all_chunk_payload_ids) > 5 else ''}")
+                else:
+                    print(f"⚠️ [Step 2] 查询失败，状态码: {response.status_code}")
+                    print(f"⚠️ [Step 2] 响应内容: {response.text}")
+                    
+        except Exception as e:
+            print(f"❌ [Step 2] 查询过程中发生异常: {str(e)}")
+        
+        if not all_point_ids:
+            print(f"⚠️ [Step 2] 未找到任何切片，跳过 Qdrant 删除步骤")
+        else:
+            # ==========================================
+            # Step 3: 外科手术 - 删除实体
+            # ==========================================
+            print(f"\n🔬 [Step 3] 正在外科手术 - 处理实体...")
+            
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    scroll_url = f"{qdrant_url}/collections/{entities_collection}/points/scroll"
+                    
+                    scroll_payload = {
+                        "limit": 1000,
+                        "with_payload": True
+                    }
+                    
+                    response = await client.post(
+                        scroll_url,
+                        headers={
+                            "api-key": qdrant_api_key,
+                            "Content-Type": "application/json"
+                        },
+                        json=scroll_payload
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        entities = data.get("result", {}).get("points", [])
+                        
+                        entities_to_delete = []
+                        entities_to_update = []
+                        
+                        for entity in entities:
+                            entity_id = entity["id"]
+                            entity_name = entity.get("payload", {}).get("entity_name", "")
+                            source_id = entity.get("payload", {}).get("source_id", "")
+                            content = entity.get("payload", {}).get("content", "")
+                            
+                            if not source_id:
+                                continue
+                            
+                            # 分割 source_id 和 content
+                            src_list = source_id.split("<SEP>")
+                            content_list = content.split("<SEP>") if content else []
+                            
+                            # 使用 enumerate 同步遍历，确保索引对应
+                            new_src_list = []
+                            new_content_list = []
+                            deleted_indices = []
+                            
+                            for idx, src_id in enumerate(src_list):
+                                if src_id not in all_chunk_payload_ids:
+                                    # 保留该 ID
+                                    new_src_list.append(src_id)
+                                    # 严格按索引取对应的 content，防止错位
+                                    if idx < len(content_list):
+                                        new_content_list.append(content_list[idx])
+                                else:
+                                    # 记录删除的索引
+                                    deleted_indices.append(idx)
+                            
+                            # 判断是否需要删除或更新
+                            if not new_src_list:
+                                entities_to_delete.append({"id": entity_id, "name": entity_name})
+                            elif len(new_src_list) != len(src_list):
+                                # 有变化，需要更新
+                                new_source_id = "<SEP>".join(new_src_list)
+                                new_content = "<SEP>".join(new_content_list)
+                                entities_to_update.append({
+                                    "id": entity_id,
+                                    "name": entity_name,
+                                    "new_source_id": new_source_id,
+                                    "new_content": new_content,
+                                    "deleted_indices": deleted_indices
+                                })
+                        
+                        print(f"📊 [Step 3] 扫描完成！需要删除 {len(entities_to_delete)} 个实体，更新 {len(entities_to_update)} 个实体")
+                        
+                        if entities_to_delete:
+                            print(f"\n🗑️ [Step 3] 准备删除以下实体：")
+                            for i, entity_info in enumerate(entities_to_delete, 1):
+                                print(f"   {i}. 实体名称: {entity_info['name']} (ID: {entity_info['id']})")
+                            
+                            delete_url = f"{qdrant_url}/collections/{entities_collection}/points/delete"
+                            response = await client.post(
+                                delete_url,
+                                headers={
+                                    "api-key": qdrant_api_key,
+                                    "Content-Type": "application/json"
+                                },
+                                json={"points": [e["id"] for e in entities_to_delete]}
+                            )
+                            if response.status_code == 200:
+                                print(f"✅ [Step 3] 删除 {len(entities_to_delete)} 个实体成功")
+                            else:
+                                print(f"⚠️ [Step 3] 删除实体失败，状态码: {response.status_code}")
+                        
+                        if entities_to_update:
+                            print(f"\n📝 [Step 3] 准备更新以下实体：")
+                            for i, update_item in enumerate(entities_to_update, 1):
+                                print(f"   {i}. 实体名称: {update_item['name']} (ID: {update_item['id']})")
+                                print(f"      - 删除索引: {update_item['deleted_indices']}")
+                                print(f"      - 新 source_id: {update_item['new_source_id'][:100]}{'...' if len(update_item['new_source_id']) > 100 else ''}")
+                                print(f"      - 新 content: {update_item['new_content'][:100]}{'...' if len(update_item['new_content']) > 100 else ''}")
+                            
+                            for update_item in entities_to_update:
+                                update_url = f"{qdrant_url}/collections/{entities_collection}/points/payload"
+                                response = await client.post(
+                                    update_url,
+                                    headers={
+                                        "api-key": qdrant_api_key,
+                                        "Content-Type": "application/json"
+                                    },
+                                    json={
+                                        "payload": {
+                                            "source_id": update_item["new_source_id"],
+                                            "content": update_item["new_content"]
+                                        },
+                                        "points": [update_item["id"]]
+                                    }
+                                )
+                                if response.status_code == 200:
+                                    print(f"   ✅ 更新实体 {update_item['name']} (ID: {update_item['id']}): 删除了索引 {update_item['deleted_indices']} 的内容")
+                            print(f"✅ [Step 3] 更新 {len(entities_to_update)} 个实体成功")
+                            
+                    else:
+                        print(f"⚠️ [Step 3] 查询实体失败，状态码: {response.status_code}")
+                        
+            except Exception as e:
+                print(f"❌ [Step 3] 处理实体过程中发生异常: {str(e)}")
+            
+            # ==========================================
+            # Step 4: 外科手术 - 删除关系
+            # ==========================================
+            print(f"\n🔬 [Step 4] 正在外科手术 - 处理关系...")
+            
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    scroll_url = f"{qdrant_url}/collections/{relationships_collection}/points/scroll"
+                    
+                    scroll_payload = {
+                        "limit": 1000,
+                        "with_payload": True
+                    }
+                    
+                    response = await client.post(
+                        scroll_url,
+                        headers={
+                            "api-key": qdrant_api_key,
+                            "Content-Type": "application/json"
+                        },
+                        json=scroll_payload
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        relationships = data.get("result", {}).get("points", [])
+                        
+                        relationships_to_delete = []
+                        relationships_to_update = []
+                        
+                        for rel in relationships:
+                            rel_id = rel["id"]
+                            source_id = rel.get("payload", {}).get("source_id", "")
+                            content = rel.get("payload", {}).get("content", "")
+                            
+                            if not source_id:
+                                continue
+                            
+                            # 分割 source_id 和 content
+                            src_list = source_id.split("<SEP>")
+                            content_list = content.split("<SEP>") if content else []
+                            
+                            # 使用 enumerate 同步遍历，确保索引对应
+                            new_src_list = []
+                            new_content_list = []
+                            deleted_indices = []
+                            
+                            for idx, src_id in enumerate(src_list):
+                                if src_id not in all_chunk_payload_ids:
+                                    # 保留该 ID
+                                    new_src_list.append(src_id)
+                                    # 严格按索引取对应的 content，防止错位
+                                    if idx < len(content_list):
+                                        new_content_list.append(content_list[idx])
+                                else:
+                                    # 记录删除的索引
+                                    deleted_indices.append(idx)
+                            
+                            # 判断是否需要删除或更新
+                            if not new_src_list:
+                                relationships_to_delete.append(rel_id)
+                            elif len(new_src_list) != len(src_list):
+                                # 有变化，需要更新
+                                new_source_id = "<SEP>".join(new_src_list)
+                                new_content = "<SEP>".join(new_content_list)
+                                relationships_to_update.append({
+                                    "id": rel_id,
+                                    "new_source_id": new_source_id,
+                                    "new_content": new_content,
+                                    "deleted_indices": deleted_indices
+                                })
+                        
+                        print(f"📊 [Step 4] 扫描完成！需要删除 {len(relationships_to_delete)} 个关系，更新 {len(relationships_to_update)} 个关系")
+                        
+                        if relationships_to_delete:
+                            print(f"\n🗑️ [Step 4] 准备删除以下关系：")
+                            for i, rel_id in enumerate(relationships_to_delete, 1):
+                                print(f"   {i}. 关系 ID: {rel_id}")
+                            
+                            delete_url = f"{qdrant_url}/collections/{relationships_collection}/points/delete"
+                            response = await client.post(
+                                delete_url,
+                                headers={
+                                    "api-key": qdrant_api_key,
+                                    "Content-Type": "application/json"
+                                },
+                                json={"points": relationships_to_delete}
+                            )
+                            if response.status_code == 200:
+                                print(f"✅ [Step 4] 删除 {len(relationships_to_delete)} 个关系成功")
+                            else:
+                                print(f"⚠️ [Step 4] 删除关系失败，状态码: {response.status_code}")
+                        
+                        if relationships_to_update:
+                            print(f"\n📝 [Step 4] 准备更新以下关系：")
+                            for i, update_item in enumerate(relationships_to_update, 1):
+                                print(f"   {i}. 关系 ID: {update_item['id']}")
+                                print(f"      - 删除索引: {update_item['deleted_indices']}")
+                                print(f"      - 新 source_id: {update_item['new_source_id'][:100]}{'...' if len(update_item['new_source_id']) > 100 else ''}")
+                                print(f"      - 新 content: {update_item['new_content'][:100]}{'...' if len(update_item['new_content']) > 100 else ''}")
+                            
+                            for update_item in relationships_to_update:
+                                update_url = f"{qdrant_url}/collections/{relationships_collection}/points/payload"
+                                response = await client.post(
+                                    update_url,
+                                    headers={
+                                        "api-key": qdrant_api_key,
+                                        "Content-Type": "application/json"
+                                    },
+                                    json={
+                                        "payload": {
+                                            "source_id": update_item["new_source_id"],
+                                            "content": update_item["new_content"]
+                                        },
+                                        "points": [update_item["id"]]
+                                    }
+                                )
+                                if response.status_code == 200:
+                                    print(f"   ✅ 更新关系 ID {update_item['id']}: 删除了索引 {update_item['deleted_indices']} 的内容")
+                            print(f"✅ [Step 4] 更新 {len(relationships_to_update)} 个关系成功")
+                            
+                    else:
+                        print(f"⚠️ [Step 4] 查询关系失败，状态码: {response.status_code}")
+                        
+            except Exception as e:
+                print(f"❌ [Step 4] 处理关系过程中发生异常: {str(e)}")
+            
+            # ==========================================
+            # Step 5: 灭口 - 删除切片
+            # ==========================================
+            print(f"\n🗑️ [Step 5] 正在灭口 - 删除所有切片...")
+            
+            try:
+                print(f"\n📋 [Step 5] 准备删除以下切片：")
+                for i, (point_id, chunk_id) in enumerate(zip(all_point_ids, all_chunk_payload_ids), 1):
+                    print(f"   {i}. Point ID: {point_id}, Chunk ID: {chunk_id}")
+                
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    delete_url = f"{qdrant_url}/collections/{chunks_collection}/points/delete"
+                    
+                    response = await client.post(
+                        delete_url,
+                        headers={
+                            "api-key": qdrant_api_key,
+                            "Content-Type": "application/json"
+                        },
+                        json={"points": all_point_ids}
+                    )
+                    
+                    if response.status_code == 200:
+                        print(f"\n✅ [Step 5] 删除 {len(all_point_ids)} 个切片成功")
+                        print(f"📊 [Step 5] 响应内容: {response.text}")
+                    else:
+                        print(f"⚠️ [Step 5] 删除切片失败，状态码: {response.status_code}")
+                        print(f"⚠️ [Step 5] 响应内容: {response.text}")
+                        
+            except Exception as e:
+                print(f"❌ [Step 5] 删除切片过程中发生异常: {str(e)}")
+            
+            print(f"\n📊 [Delete] Qdrant 删除完成！")
+    
+    # ==========================================
+    # Step 6: 销户 - 删除 MySQL 记录
+    # ==========================================
+    print(f"\n🗃️ [Step 6] 正在从 MySQL 删除文档记录...")
+    print(f"📋 [Step 6] 文档信息：")
+    print(f"   - 文档 ID: {doc.id}")
+    print(f"   - 文件名: {doc.filename}")
+    print(f"   - 文件大小: {doc.file_size}")
+    print(f"   - 上传时间: {doc.upload_time}")
+    print(f"   - 状态: {doc.status}")
+    
+    db.delete(doc)
+    db.commit()
+    print(f"\n✅ [Step 6] MySQL 记录删除成功！文件名: {filename}")
+    
+    # ==========================================
+    # Step 7: 本地文件外科手术 (Safe Surgical Cleanup)
+    # ==========================================
+    print(f"\n🧹 [Step 7] 正在进行本地文件外科手术...")
+    data_dir = "./data"
+    
+    if not full_doc_id:
+        print(f"⚠️ [Step 7] 无 Full Doc ID，跳过本地文件清理")
+    else:
+        # ==========================================
+        # Step 7.1: 清理 kv_store_doc_status.json (关键！导致跳过处理的元凶)
+        # ==========================================
+        print(f"\n📄 [Step 7.1] 清理 kv_store_doc_status.json...")
+        doc_status_file = os.path.join(data_dir, "kv_store_doc_status.json")
+        deleted_doc_status_count = 0
+        
+        try:
+            if os.path.exists(doc_status_file):
+                with open(doc_status_file, "r", encoding="utf-8") as f:
+                    doc_status_data = json.load(f)
+                
+                original_count = len(doc_status_data)
+                
+                # 删除对应的 doc_id
+                if full_doc_id in doc_status_data:
+                    deleted_doc_info = doc_status_data[full_doc_id]
+                    del doc_status_data[full_doc_id]
+                    deleted_doc_status_count = 1
+                    print(f"🧹 [Step 7.1] 清理 doc_status: 已移除文档 {full_doc_id}")
+                    print(f"   - 内容摘要: {deleted_doc_info.get('content_summary', '')[:100]}{'...' if len(deleted_doc_info.get('content_summary', '')) > 100 else ''}")
+                    print(f"   - 内容长度: {deleted_doc_info.get('content_length', 0)} 字符")
+                    print(f"   - 创建时间: {deleted_doc_info.get('created_at', 'N/A')}")
+                
+                # 写回文件
+                with open(doc_status_file, "w", encoding="utf-8") as f:
+                    json.dump(doc_status_data, f, ensure_ascii=False, indent=2)
+                
+                print(f"✅ [Step 7.1] 清理完成！删除了 {deleted_doc_status_count}/{original_count} 个文档状态")
+            else:
+                print(f"⚠️ [Step 7.1] 文件不存在: {doc_status_file}")
+        except Exception as e:
+            print(f"❌ [Step 7.1] 处理失败: {str(e)}")
+        
+        # ==========================================
+        # Step 7.2: 清理 kv_store_full_docs.json (关键！存储完整文档内容)
+        # ==========================================
+        print(f"\n📄 [Step 7.2] 清理 kv_store_full_docs.json...")
+        full_docs_file = os.path.join(data_dir, "kv_store_full_docs.json")
+        deleted_full_docs_count = 0
+        
+        try:
+            if os.path.exists(full_docs_file):
+                with open(full_docs_file, "r", encoding="utf-8") as f:
+                    full_docs_data = json.load(f)
+                
+                original_count = len(full_docs_data)
+                
+                # 删除对应的 doc_id
+                if full_doc_id in full_docs_data:
+                    deleted_doc_info = full_docs_data[full_doc_id]
+                    del full_docs_data[full_doc_id]
+                    deleted_full_docs_count = 1
+                    print(f"🧹 [Step 7.2] 清理 full_docs: 已移除文档 {full_doc_id}")
+                    print(f"   - 文件路径: {deleted_doc_info.get('file_path', 'unknown')}")
+                    print(f"   - 内容长度: {len(deleted_doc_info.get('content', ''))} 字符")
+                    print(f"   - 创建时间: {deleted_doc_info.get('create_time', 'N/A')}")
+                    print(f"   - 更新时间: {deleted_doc_info.get('update_time', 'N/A')}")
+                
+                # 写回文件
+                with open(full_docs_file, "w", encoding="utf-8") as f:
+                    json.dump(full_docs_data, f, ensure_ascii=False, indent=2)
+                
+                print(f"✅ [Step 7.2] 清理完成！删除了 {deleted_full_docs_count}/{original_count} 个完整文档")
+            else:
+                print(f"⚠️ [Step 7.2] 文件不存在: {full_docs_file}")
+        except Exception as e:
+            print(f"❌ [Step 7.2] 处理失败: {str(e)}")
+        
+        # ==========================================
+        # Step 7.3: 清理 kv_store_text_chunks.json (存储切片文本)
+        # ==========================================
+        print(f"\n📄 [Step 7.3] 清理 kv_store_text_chunks.json...")
+        chunks_file = os.path.join(data_dir, "kv_store_text_chunks.json")
+        deleted_chunks_count = 0
+        
+        try:
+            if os.path.exists(chunks_file):
+                with open(chunks_file, "r", encoding="utf-8") as f:
+                    chunks_data = json.load(f)
+                
+                original_count = len(chunks_data)
+                
+                # 删除所有关联的 chunk ID
+                print(f"📋 [Step 7.3] 准备删除以下切片：")
+                for i, chunk_id in enumerate(all_chunk_payload_ids, 1):
+                    if chunk_id in chunks_data:
+                        chunk_info = chunks_data[chunk_id]
+                        print(f"   {i}. Chunk ID: {chunk_id}")
+                        print(f"      - Token 数: {chunk_info.get('tokens', 0)}")
+                        print(f"      - 切片顺序: {chunk_info.get('chunk_order_index', 0)}")
+                        print(f"      - 内容预览: {chunk_info.get('content', '')[:100]}{'...' if len(chunk_info.get('content', '')) > 100 else ''}")
+                        del chunks_data[chunk_id]
+                        deleted_chunks_count += 1
+                
+                # 写回文件
+                with open(chunks_file, "w", encoding="utf-8") as f:
+                    json.dump(chunks_data, f, ensure_ascii=False, indent=2)
+                
+                print(f"✅ [Step 7.3] 清理完成！删除了 {deleted_chunks_count}/{original_count} 个切片")
+            else:
+                print(f"⚠️ [Step 7.3] 文件不存在: {chunks_file}")
+        except Exception as e:
+            print(f"❌ [Step 7.3] 处理失败: {str(e)}")
+        
+        # ==========================================
+        # Step 7.4: 清理 kv_store_full_entities.json (实体库，需要外科手术)
+        # ==========================================
+        print(f"\n📄 [Step 7.4] 清理 kv_store_full_entities.json...")
+        entities_file = os.path.join(data_dir, "kv_store_full_entities.json")
+        deleted_entities_count = 0
+        updated_entities_count = 0
+        final_deleted_entities = [] # ✅ 存储要删除的实体列表，供后续 GraphML 清理使用
+        
+        try:
+            if os.path.exists(entities_file):
+                with open(entities_file, "r", encoding="utf-8") as f:
+                    entities_data = json.load(f)
+                
+                original_count = len(entities_data)
+                entities_to_delete = []
+                entities_updated_list = []
+                
+                # 遍历所有实体
+                for entity_name, entity_value in entities_data.items():
+                    source_id = entity_value.get("source_id", "")
+                    content = entity_value.get("content", "")
+                    
+                    if not source_id:
+                        continue
+                    
+                    # 分割 source_id 和 content
+                    src_list = source_id.split("<SEP>")
+                    content_list = content.split("<SEP>") if content else []
+                    
+                    # 使用 enumerate 同步遍历，确保索引对应
+                    new_src_list = []
+                    new_content_list = []
+                    deleted_indices = []
+                    
+                    for idx, src_id in enumerate(src_list):
+                        if src_id not in all_chunk_payload_ids:
+                            # 保留该 ID
+                            new_src_list.append(src_id)
+                            # 严格按索引取对应的 content，防止错位
+                            if idx < len(content_list):
+                                new_content_list.append(content_list[idx])
+                        else:
+                            # 记录删除的索引
+                            deleted_indices.append(idx)
+                    
+                    # 如果没有剩余的 source_id，标记删除
+                    if not new_src_list:
+                        entities_to_delete.append(entity_name)
+                    # 如果有变化，需要更新
+                    elif len(new_src_list) != len(src_list):
+                        new_source_id = "<SEP>".join(new_src_list)
+                        new_content = "<SEP>".join(new_content_list)
+                        
+                        # 更新实体数据
+                        entities_data[entity_name]["source_id"] = new_source_id
+                        entities_data[entity_name]["content"] = new_content
+                        updated_entities_count += 1
+                        entities_updated_list.append({
+                            "name": entity_name,
+                            "deleted_indices": deleted_indices,
+                            "old_source_count": len(src_list),
+                            "new_source_count": len(new_src_list)
+                        })
+                
+                # 打印删除的实体
+                if entities_to_delete:
+                    print(f"\n🗑️ [Step 7.4] 准备删除以下实体（完全依赖已删除的切片）：")
+                    for i, entity_name in enumerate(entities_to_delete, 1):
+                        print(f"   {i}. 实体名称: {entity_name}")
+                    
+                    # ✅ 保存到外部变量
+                    final_deleted_entities = entities_to_delete
+                
+                # 打印更新的实体
+                if entities_updated_list:
+                    print(f"\n📝 [Step 7.4] 准备更新以下实体（移除部分切片引用）：")
+                    for i, entity_info in enumerate(entities_updated_list, 1):
+                        print(f"   {i}. 实体名称: {entity_info['name']}")
+                        print(f"      - 删除索引: {entity_info['deleted_indices']}")
+                        print(f"      - 引用数变化: {entity_info['old_source_count']} -> {entity_info['new_source_count']}")
+                
+                # 删除完全依赖已删除 chunk 的实体
+                for entity_name in entities_to_delete:
+                    del entities_data[entity_name]
+                    deleted_entities_count += 1
+                
+                # 删除文档级别的实体索引（新增！）
+                deleted_doc_entities_index_count = 0
+                if full_doc_id in entities_data:
+                    del entities_data[full_doc_id]
+                    deleted_doc_entities_index_count = 1
+                    print(f"🧹 [Step 7.4] 清理文档级实体索引: 已移除 {full_doc_id}")
+                
+                # 写回文件
+                with open(entities_file, "w", encoding="utf-8") as f:
+                    json.dump(entities_data, f, ensure_ascii=False, indent=2)
+                
+                print(f"✅ [Step 7.4] 清理完成！删除了 {deleted_entities_count} 个实体，更新了 {updated_entities_count} 个实体，删除了 {deleted_doc_entities_index_count} 个文档级索引")
+            else:
+                print(f"⚠️ [Step 7.4] 文件不存在: {entities_file}")
+        except Exception as e:
+            print(f"❌ [Step 7.4] 处理失败: {str(e)}")
+        
+        # ==========================================
+        # Step 7.5: 清理 kv_store_full_relations.json (全新增清理)
+        # ==========================================
+        print(f"\n📄 [Step 7.5] 清理 kv_store_full_relations.json...")
+        relations_file = os.path.join(data_dir, "kv_store_full_relations.json")
+        deleted_relations_index_count = 0
+        
+        try:
+            if os.path.exists(relations_file):
+                with open(relations_file, "r", encoding="utf-8") as f:
+                    relations_data = json.load(f)
+                
+                original_count = len(relations_data)
+                
+                # 删除文档级别的关系索引
+                if full_doc_id in relations_data:
+                    deleted_rel_info = relations_data[full_doc_id]
+                    del relations_data[full_doc_id]
+                    deleted_relations_index_count = 1
+                    print(f"🧹 [Step 7.5] 清理文档级关系索引: 已移除 {full_doc_id}")
+                    print(f"   - 关系对数量: {len(deleted_rel_info.get('relation_pairs', []))}")
+                    print(f"   - 创建时间: {deleted_rel_info.get('create_time', 'N/A')}")
+                    print(f"   - 更新时间: {deleted_rel_info.get('update_time', 'N/A')}")
+                
+                # 写回文件
+                with open(relations_file, "w", encoding="utf-8") as f:
+                    json.dump(relations_data, f, ensure_ascii=False, indent=2)
+                
+                print(f"✅ [Step 7.5] 清理完成！删除了 {deleted_relations_index_count}/{original_count} 个文档级关系索引")
+            else:
+                print(f"⚠️ [Step 7.5] 文件不存在: {relations_file}")
+        except Exception as e:
+            print(f"❌ [Step 7.5] 处理失败: {str(e)}")
+        
+        # ==========================================
+        # Step 7.6: 清理 kv_store_llm_response_cache.json (LLM 缓存，可选)
+        # ==========================================
+        print(f"\n📄 [Step 7.6] 清理 kv_store_llm_response_cache.json...")
+        llm_cache_file = os.path.join(data_dir, "kv_store_llm_response_cache.json")
+        deleted_llm_cache_count = 0
+        
+        try:
+            if os.path.exists(llm_cache_file):
+                with open(llm_cache_file, "r", encoding="utf-8") as f:
+                    llm_cache_data = json.load(f)
+                
+                original_count = len(llm_cache_data)
+                cache_keys_to_delete = []
+                cache_deleted_list = []
+                
+                # 遍历所有缓存键，查找关联的 chunk_id
+                for cache_key, cache_value in llm_cache_data.items():
+                    chunk_id = cache_value.get("chunk_id", "")
+                    if chunk_id in all_chunk_payload_ids:
+                        cache_keys_to_delete.append(cache_key)
+                        cache_deleted_list.append({
+                            "key": cache_key,
+                            "chunk_id": chunk_id,
+                            "cache_type": cache_value.get("cache_type", "unknown"),
+                            "return_length": len(cache_value.get("return", ""))
+                        })
+                
+                # 打印要删除的缓存
+                if cache_deleted_list:
+                    print(f"\n📋 [Step 7.6] 准备删除以下 LLM 缓存：")
+                    for i, cache_info in enumerate(cache_deleted_list, 1):
+                        print(f"   {i}. 缓存 Key: {cache_info['key'][:50]}{'...' if len(cache_info['key']) > 50 else ''}")
+                        print(f"      - 关联 Chunk ID: {cache_info['chunk_id']}")
+                        print(f"      - 缓存类型: {cache_info['cache_type']}")
+                        print(f"      - 返回内容长度: {cache_info['return_length']} 字符")
+                
+                # 删除关联的缓存
+                for cache_key in cache_keys_to_delete:
+                    del llm_cache_data[cache_key]
+                    deleted_llm_cache_count += 1
+                
+                # 写回文件
+                with open(llm_cache_file, "w", encoding="utf-8") as f:
+                    json.dump(llm_cache_data, f, ensure_ascii=False, indent=2)
+                
+                print(f"✅ [Step 7.6] 清理完成！删除了 {deleted_llm_cache_count}/{original_count} 个 LLM 缓存")
+            else:
+                print(f"⚠️ [Step 7.6] 文件不存在: {llm_cache_file}")
+        except Exception as e:
+            print(f"❌ [Step 7.6] 处理失败: {str(e)}")
+        
+        # ==========================================
+        # Step 7.8: 清理 graph_chunk_entity_relation.graphml (修复缺陷：维护图结构一致性)
+        # ==========================================
+        print(f"\n📄 [Step 7.8] 清理 graph_chunk_entity_relation.graphml...")
+        graphml_file = os.path.join(data_dir, "graph_chunk_entity_relation.graphml")
+        deleted_nodes_count = 0
+        
+        try:
+            if os.path.exists(graphml_file) and final_deleted_entities:
+                G = nx.read_graphml(graphml_file)
+                original_node_count = G.number_of_nodes()
+                
+                print(f"   📊 [Step 7.8] 加载前节点数: {original_node_count}")
+                print(f"   🗑️ [Step 7.8] 计划移除的节点: {final_deleted_entities}")
+                
+                # 从图中移除节点
+                nodes_removed = []
+                for entity in final_deleted_entities:
+                    # GraphML 中的节点 ID 是用双引号包裹的字符串形式，例如 '"实体名"'
+                    # LightRAG 的存储方式通常就是直接用名字作为节点ID
+                    if G.has_node(entity):
+                        G.remove_node(entity)
+                        nodes_removed.append(entity)
+                    else:
+                        # 尝试带引号的版本 (有些 networkx 版本或 graphml 实现会有差异)
+                        quoted_entity = f"\"{entity}\""
+                        if G.has_node(quoted_entity):
+                            G.remove_node(quoted_entity)
+                            nodes_removed.append(quoted_entity)
+                
+                deleted_nodes_count = len(nodes_removed)
+                
+                # 写回文件
+                nx.write_graphml(G, graphml_file)
+                
+                print(f"✅ [Step 7.8] GraphML 清理完成！移除了 {deleted_nodes_count} 个节点")
+                print(f"   📊 [Step 7.8] 剩余节点数: {G.number_of_nodes()}")
+            elif not final_deleted_entities:
+                print(f"ℹ️ [Step 7.8] 没有被完全删除的实体，无需修改 GraphML")
+            else:
+                print(f"⚠️ [Step 7.8] 文件不存在: {graphml_file}")
+        except Exception as e:
+            print(f"❌ [Step 7.8] 处理 GraphML 失败: {str(e)}")
+            
+        # ==========================================
+        # Step 7.9: 总结
+        # ==========================================
+        print(f"\n📊 [Step 7] 本地文件外科手术完成！")
+        print(f"   - 文档状态清理: {deleted_doc_status_count} 个")
+        print(f"   - 完整文档清理: {deleted_full_docs_count} 个")
+        print(f"   - 切片清理: {deleted_chunks_count} 个")
+        print(f"   - 实体清理: 删除 {deleted_entities_count} 个，更新 {updated_entities_count} 个，删除文档级索引 {deleted_doc_entities_index_count} 个")
+        print(f"   - 关系清理: 删除文档级索引 {deleted_relations_index_count} 个")
+        print(f"   - LLM 缓存清理: {deleted_llm_cache_count} 个")
+        print(f"   - GraphML 清理: 删除节点 {deleted_nodes_count} 个")
+    
+    # ==========================================
+    # Step 8: 热重载 (Hot Reload) - 修复“需重启生效”的痛点
+    # ==========================================
+    print(f"\n🔄 [Step 8]正在触发引擎热重载，刷新内存缓存...")
+    try:
+        await init_rag_engine()
+        print(f"✅ [Step 8] 热重载成功！内存数据已更新为最新状态")
+    except Exception as e:
+         print(f"⚠️ [Step 8] 热重载失败: {str(e)} (不影响删除结果，但建议稍后重启)")
+
+    print(f"\n🎉 [Delete] 全链路级联删除完成！")
+    
+    return {"message": "删除成功", "filename": filename, "deleted_chunks": len(all_point_ids) if full_doc_id else 0}
+
+def build_snippet_around_query(full_text: str, query: str, window: int = 200) -> str:
+    """围绕查询关键词居中截取摘要"""
+    if not full_text:
+        return ""
+    
+    # 清理查询词，剥离常见后缀
+    clean_query = query.rstrip("？?！!。，")
+    suffixes = ["是什么意思", "是什么", "的意思", "的定义", "的含义", "有哪些", "怎么样", "怎么用", "的区别", "的特点"]
+    for suffix in suffixes:
+        if clean_query.endswith(suffix):
+            clean_query = clean_query[:-len(suffix)].strip()
+            break
+    
+    # 构建候选关键词列表
+    query_terms = []
+    if clean_query and len(clean_query) >= 2:
+        query_terms.append(clean_query)
+    # 按空格/标点分词
+    import re
+    parts = [p.strip() for p in re.split(r'[\s，。、,]+', query) if len(p.strip()) >= 2]
+    for p in parts:
+        if p not in query_terms:
+            query_terms.append(p)
+    
+    # 在全文中查找关键词
+    lower_text = full_text.lower()
+    hit_index = -1
+    hit_len = 0
+    for term in query_terms:
+        idx = lower_text.find(term.lower())
+        if idx != -1:
+            hit_index = idx
+            hit_len = len(term)
+            break
+    
+    if hit_index == -1:
+        # 没找到关键词，回退到前 N 字符
+        return full_text[:window] + ("..." if len(full_text) > window else "")
+    
+    # 居中截取
+    start = max(0, hit_index - window // 2)
+    end = min(len(full_text), hit_index + hit_len + window // 2)
+    snippet = full_text[start:end].strip()
+    if start > 0:
+        snippet = "..." + snippet
+    if end < len(full_text):
+        snippet += "..."
+    return snippet
+
+@router.post("/chat", summary="对话接口 (流式+引用)")
+async def chat_with_rag(request: ChatRequest):
+    if not rag_engine:
+        raise HTTPException(status_code=500, detail="RAG 引擎未初始化")
+
+    query_text = request.query
+    if isinstance(query_text, list):
+        query_text = " ".join([str(item) for item in query_text])
+    elif not isinstance(query_text, str):
+        query_text = str(query_text)
+    query_text = query_text.strip()
+    if not query_text:
+        raise HTTPException(status_code=400, detail="query 不能为空")
+
+    print(f"💬 [Chat] 收到问题: {query_text}")
+
+    # 使用 LightRAG 原生 aquery_llm，一步完成：检索 + LLM 生成 + 引用
+    param = QueryParam(
+        mode=request.mode or "hybrid",
+        stream=True,
+    )
+
+    result = await rag_engine.aquery_llm(query_text, param=param)
+
+    async def event_generator():
+        try:
+            # 1. 从 result 中提取引用和 LLM 响应
+            data = result.get("data", {})
+            references = data.get("references", [])
+            chunks = data.get("chunks", [])
+            llm_response = result.get("llm_response", {})
+
+            # 2. 构造 sources 列表（适配前端 SourceItem 接口）
+            sources = []
+            # 构建 reference_id -> chunk content 的映射
+            ref_id_to_chunks = {}
+            for chunk in chunks:
+                ref_id = chunk.get("reference_id", "")
+                content = chunk.get("content", "")
+                if ref_id and content:
+                    ref_id_to_chunks.setdefault(ref_id, []).append(content)
+
+            for ref in references:
+                ref_id = ref.get("reference_id", "0")
+                file_path = ref.get("file_path", "未知来源")
+                # 获取该引用对应的 chunk 内容
+                chunk_contents = ref_id_to_chunks.get(ref_id, [])
+                full_content = "\n\n".join(chunk_contents) if chunk_contents else ""
+                # 摘要：围绕查询关键词居中截取
+                snippet = build_snippet_around_query(full_content, query_text, window=200) if full_content else ""
+
+                sources.append({
+                    "id": int(ref_id) if ref_id.isdigit() else 0,
+                    "content": snippet,
+                    "content_full": full_content,
+                    "highlight_terms": [],  # LightRAG 原生不提供，前端可以自行从 query 提取
+                    "source_filename": os.path.basename(file_path) if file_path else "未知来源",
+                    "score": 1.0,
+                })
+
+            # 3. 流式发送 LLM 内容
+            if llm_response.get("is_streaming"):
+                response_stream = llm_response.get("response_iterator")
+                if response_stream:
+                    async for chunk_text in response_stream:
+                        if chunk_text:
+                            yield json.dumps({"type": "content", "data": chunk_text}, ensure_ascii=False) + "\n"
+            else:
+                # 非流式回退
+                content = llm_response.get("content", "")
+                if content:
+                    yield json.dumps({"type": "content", "data": content}, ensure_ascii=False) + "\n"
+
+            # 4. 最后发送引用信息
+            yield json.dumps({"type": "sources", "data": sources}, ensure_ascii=False) + "\n"
+
+        except Exception as e:
+            print(f"❌ [Chat] 流式输出异常: {str(e)}")
+            yield json.dumps({"type": "error", "data": str(e)}, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")

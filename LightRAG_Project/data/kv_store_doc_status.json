@@ -1,0 +1,32 @@
+{
+  "doc-d64d5477b33aa39b3980ef716e1b2002": {
+    "status": "failed",
+    "error_msg": "Vector count mismatch: expected 2 vectors but got 4 vectors (from embedding result).",
+    "content_summary": "半导体 (Semiconductor)\n1. 概述\n\n半导体（Semiconductor）是指常温下导电性能介于导体（如铜、银）与绝缘体（如橡胶、玻璃）之间的材料。半导体在收音机、电视机以及测温上有着广泛的应用。如二极管就是采用半导体制作的器件。无论从科技或是经济发展的角度来看，半导体的重要性都是非常巨大的。今日大部分的电子产品，如计算机、移动电话或是数字录音机当中的核心单元都和半导体有着极为密切的关连。常见的半导体材料有硅、锗、砷化镓等，而硅是各种半导体材料中，在商业应用上最具有影响力的一种。...",
+    "content_length": 2135,
+    "created_at": "2026-02-08T09:46:47.732842+00:00",
+    "updated_at": "2026-02-08T09:53:07.279752+00:00",
+    "file_path": "半导体.txt",
+    "track_id": "insert_20260208_174647_75ba92c3",
+    "metadata": {
+      "processing_start_time": 1770544385,
+      "processing_end_time": 1770544387
+    },
+    "chunks_list": []
+  },
+  "doc-78aea57af926402f2f1f8460d628871d": {
+    "status": "failed",
+    "error_msg": "Vector count mismatch: expected 3 vectors but got 6 vectors (from embedding result).",
+    "content_summary": "中阶成语词典 (Selected Idioms Dictionary)\n第一组：形容处世与态度 (1-10)\n\n    【虚与委蛇】\n\n        拼音： xū yǔ wēi yí\n\n        释义： 指对人虚情假意，敷衍应酬。注意“蛇”在这里读 yí。\n\n    【颐指气使】\n\n        拼音： yí zhǐ qì shǐ\n\n        释义： 不说话而用面部表情示意。形容有权势的人指挥别人的傲慢神气。\n\n    【刚愎自用】\n\n        拼音： gāng bì zì...",
+    "content_length": 3759,
+    "created_at": "2026-02-08T09:51:18.865804+00:00",
+    "updated_at": "2026-02-08T09:53:07.323368+00:00",
+    "file_path": "成语.txt",
+    "track_id": "insert_20260208_175118_8eed4aec",
+    "metadata": {
+      "processing_start_time": 1770544385,
+      "processing_end_time": 1770544387
+    },
+    "chunks_list": []
+  }
+}
