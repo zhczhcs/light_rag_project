@@ -1,13 +1,64 @@
 import os
 import re
 import json
+import time
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
+from openai import AsyncOpenAI
 
 from app.rag.engine import QueryParam
 from app.schemas.models import ChatRequest
 from app.services.file_service import build_snippet_around_query
 from app.core import globals
+from app.utils.metrics import monitor
+
+
+async def extract_keywords_via_llm(query: str) -> list[str]:
+    """
+    用轻量级 LLM 从用户问题中提取 1-3 个核心关键词，用于：
+    1. 前端高亮显示
+    2. 后端引用摘要的关键词定位
+    
+    使用 qwen-flash（最便宜最快），每次调用约 50-100 token。
+    """
+    try:
+        api_key = os.environ.get("ALI_API_KEY")
+        base_url = os.environ.get("ALI_BASE_URL")
+        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        
+        response = await client.chat.completions.create(
+            model="qwen-flash",
+            messages=[{
+                "role": "user",
+                "content": (
+                    "从以下用户问题中提取1-3个核心关键词，用于在文档中高亮显示。\n"
+                    "规则：\n"
+                    "1. 只提取实质性的名词或短语（如成语、专业术语、人名、概念名）\n"
+                    "2. 不要提取疑问词（什么、如何、怎么）和语气词\n"
+                    "3. 只返回关键词，用中文逗号分隔，不要解释\n"
+                    "4. 如果问题本身就是一个词（如一个成语），直接返回该词\n\n"
+                    f"问题：{query}"
+                )
+            }],
+            temperature=0,
+            max_tokens=50
+        )
+        
+        raw = response.choices[0].message.content.strip()
+        # 解析：支持中文逗号和英文逗号
+        terms = []
+        for t in raw.replace("，", ",").split(","):
+            t = t.strip().strip('"').strip("'").strip("、")
+            if len(t) >= 2:
+                terms.append(t)
+        
+        print(f"🔑 [Keywords] LLM 提取关键词: {terms} (原始: {raw})")
+        return terms[:3]  # 最多3个
+        
+    except Exception as e:
+        print(f"⚠️ [Keywords] LLM 提取失败，回退为空: {e}")
+        return []
+
 
 router = APIRouter()
 
@@ -73,15 +124,26 @@ async def chat_with_rag(request: ChatRequest):
     if not query_text:
         raise HTTPException(status_code=400, detail="query 不能为空")
 
+    # � 创建性能指标收集器
+    session_id = f"query_{time.time()}"
+    collector = monitor.create_collector(session_id)
+    
+    # ⏱️ 记录总耗时开始
+    total_start_time = time.time()
+
     # 🚀 Step 1: 智能路由决策
     selected_model = analyze_query_complexity(query_text)
     print(f"💬 [Chat] 收到问题: {query_text}")
     print(f"🧠 [Router] 智能路由: 复杂度分析后选择模型 -> {selected_model}")
 
     # 🚀 Step 2: 设置上下文变量（影响本次请求的 engine 调用）
-    token = globals.model_context.set(selected_model)
+    model_token = globals.model_context.set(selected_model)
+    metrics_token = globals.metrics_context.set(collector)
 
     try:
+        # ⏱️ 记录检索阶段开始
+        retrieval_start_time = time.time()
+        
         # 使用 LightRAG 原生 aquery_llm，一步完成：检索 + LLM 生成 + 引用
         param = QueryParam(
             mode=request.mode or "hybrid",
@@ -89,11 +151,21 @@ async def chat_with_rag(request: ChatRequest):
         )
 
         result = await globals.rag_engine.aquery_llm(query_text, param=param)
+        
+        # ⏱️ 记录检索阶段结束（注意：这里实际包含了部分生成，但大致可以这样分）
+        collector.retrieval_time = time.time() - retrieval_start_time
 
         async def event_generator():
+            # ⏱️ 记录生成阶段开始（首字延迟）
+            generation_start_time = time.time()
+            ttft_recorded = False
+            
             try:
                 # 初始发送：通知前端当前使用的模型 (可选，用于调试)
                 yield json.dumps({"type": "meta", "data": {"model": selected_model}}, ensure_ascii=False) + "\n"
+
+                # 用 LLM 提取关键词（用于高亮和摘要定位）
+                extracted_keywords = await extract_keywords_via_llm(query_text)
 
                 # 1. 从 result 中提取引用和 LLM 响应
                 data = result.get("data", {})
@@ -111,26 +183,37 @@ async def chat_with_rag(request: ChatRequest):
                     if ref_id and content:
                         ref_id_to_chunks.setdefault(ref_id, []).append(content)
 
+                # 📊 记录检索统计
+                collector.retrieved_chunks = len(chunks)
+                retrieval_sources = []
+                
                 for ref in references:
                     ref_id = ref.get("reference_id", "0")
                     file_path = ref.get("file_path", "未知来源")
+                    retrieval_sources.append(os.path.basename(file_path) if file_path else "未知来源")
+                    
                     # 获取该引用对应的 chunk 内容
                     chunk_contents = ref_id_to_chunks.get(ref_id, [])
                     # 清洗内容：移除可能存在的元数据行
                     clean_contents = [c for c in chunk_contents if "【来源文档：" not in c]
                     full_content = "\n\n".join(clean_contents) if clean_contents else ""
                     
-                    # 摘要：围绕查询关键词居中截取 (使用清洗后的内容)
-                    snippet = build_snippet_around_query(full_content, query_text, window=200) if full_content else ""
+                    # 摘要：优先使用 LLM 提取的关键词定位
+                    if extracted_keywords:
+                        snippet = build_snippet_around_query(full_content, extracted_keywords[0], window=200) if full_content else ""
+                    else:
+                        snippet = build_snippet_around_query(full_content, query_text, window=200) if full_content else ""
 
                     sources.append({
                         "id": int(ref_id) if ref_id.isdigit() else 0,
                         "content": snippet,
                         "content_full": full_content,
-                        "highlight_terms": [],  # LightRAG 原生不提供，前端可以自行从 query 提取
+                        "highlight_terms": extracted_keywords,  # ✅ 使用 LLM 提取的关键词，替代空列表
                         "source_filename": os.path.basename(file_path) if file_path else "未知来源",
                         "score": 1.0,
                     })
+                
+                collector.details['retrieval_sources'] = retrieval_sources
 
                 # 3. 流式发送 LLM 内容
                 if llm_response.get("is_streaming"):
@@ -138,12 +221,21 @@ async def chat_with_rag(request: ChatRequest):
                     if response_stream:
                         async for chunk_text in response_stream:
                             if chunk_text:
+                                # ⏱️ 记录首字延迟（TTFT - Time To First Token）
+                                if not ttft_recorded:
+                                    ttft = time.time() - generation_start_time
+                                    collector.details['ttft'] = ttft
+                                    ttft_recorded = True
+                                
                                 yield json.dumps({"type": "content", "data": chunk_text}, ensure_ascii=False) + "\n"
                 else:
                     # 非流式回退
                     content = llm_response.get("content", "")
                     if content:
                         yield json.dumps({"type": "content", "data": content}, ensure_ascii=False) + "\n"
+                
+                # ⏱️ 记录生成阶段结束
+                collector.generation_time = time.time() - generation_start_time
 
                 # 4. 最后发送引用信息
                 yield json.dumps({"type": "sources", "data": sources}, ensure_ascii=False) + "\n"
@@ -151,9 +243,19 @@ async def chat_with_rag(request: ChatRequest):
             except Exception as e:
                 print(f"❌ [Chat] 流式输出异常: {str(e)}")
                 yield json.dumps({"type": "error", "data": str(e)}, ensure_ascii=False) + "\n"
+            
+            finally:
+                # 📊 记录总耗时并打印报告
+                collector.total_time = time.time() - total_start_time
+                collector.print_query_report(query_text, selected_model)
+                
+                # 清理收集器
+                monitor.remove_collector(session_id)
 
         return StreamingResponse(event_generator(), media_type="application/x-ndjson")
     
     finally:
         # 🚀 Step 3: 清理上下文（虽然 asyncio task 隔离，但好习惯）
-        globals.model_context.reset(token)
+        globals.model_context.reset(model_token)
+        globals.metrics_context.reset(metrics_token)
+

@@ -499,10 +499,7 @@ const App: React.FC = () => {
                       </div>
                     )}
                     {item.role === 'ai' && item.sources && item.sources.length > 0 && (() => {
-                      const referencedSources = item.sources.filter(src => 
-                        item.content.includes(`[${src.id}]`)
-                      );
-                      const displaySources = referencedSources.length > 0 ? referencedSources : item.sources;
+                      const displaySources = item.sources;
                       return (
                         <div className="sources">
                           <div className="sources-title">📚 引用来源：</div>

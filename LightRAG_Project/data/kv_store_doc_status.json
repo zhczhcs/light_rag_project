@@ -1,32 +1,57 @@
 {
+  "doc-fb2c7c50606bb16ef2824f470c60e361": {
+    "status": "processed",
+    "chunks_count": 3,
+    "chunks_list": [
+      "chunk-37ffe9e38fd706ab579d8ed250d4e77a",
+      "chunk-cb6cd44c141f5e92d08db5f248c68c5c",
+      "chunk-bb3a0b9bcd470948b81699fc1d7298f0"
+    ],
+    "content_summary": "高阶成语词典 (Selected Idioms Dictionary)\n第一组：形容处世与态度 (1-10)\n\n    【虚与委蛇】\n\n        拼音： xū yǔ wēi yí\n\n        释义： 指对人虚情假意，敷衍应酬。注意“蛇”在这里读 yí。\n\n    【颐指气使】\n\n        拼音： yí zhǐ qì shǐ\n\n        释义： 不说话而用面部表情示意。形容有权势的人指挥别人的傲慢神气。\n\n    【刚愎自用】\n\n        拼音： gāng bì zì...",
+    "content_length": 3759,
+    "created_at": "2026-02-13T04:34:26.686128+00:00",
+    "updated_at": "2026-02-13T04:35:47.642838+00:00",
+    "file_path": "40个高级成语.txt",
+    "track_id": "insert_20260213_123426_a6fb0b30",
+    "metadata": {
+      "processing_start_time": 1770957266,
+      "processing_end_time": 1770957347
+    }
+  },
   "doc-d64d5477b33aa39b3980ef716e1b2002": {
-    "status": "failed",
-    "error_msg": "Vector count mismatch: expected 2 vectors but got 4 vectors (from embedding result).",
+    "status": "processed",
+    "chunks_count": 2,
+    "chunks_list": [
+      "chunk-4ec8b1d356971d5996696430fb70aa33",
+      "chunk-ae080121232af020ad6ba3a6ec2d7d3f"
+    ],
     "content_summary": "半导体 (Semiconductor)\n1. 概述\n\n半导体（Semiconductor）是指常温下导电性能介于导体（如铜、银）与绝缘体（如橡胶、玻璃）之间的材料。半导体在收音机、电视机以及测温上有着广泛的应用。如二极管就是采用半导体制作的器件。无论从科技或是经济发展的角度来看，半导体的重要性都是非常巨大的。今日大部分的电子产品，如计算机、移动电话或是数字录音机当中的核心单元都和半导体有着极为密切的关连。常见的半导体材料有硅、锗、砷化镓等，而硅是各种半导体材料中，在商业应用上最具有影响力的一种。...",
     "content_length": 2135,
-    "created_at": "2026-02-08T09:46:47.732842+00:00",
-    "updated_at": "2026-02-08T09:53:07.279752+00:00",
-    "file_path": "半导体.txt",
-    "track_id": "insert_20260208_174647_75ba92c3",
+    "created_at": "2026-02-13T11:32:16.633903+00:00",
+    "updated_at": "2026-02-13T11:34:05.089414+00:00",
+    "file_path": "半导体材料介绍.txt",
+    "track_id": "insert_20260213_193216_5c88ba3d",
     "metadata": {
-      "processing_start_time": 1770544385,
-      "processing_end_time": 1770544387
-    },
-    "chunks_list": []
+      "processing_start_time": 1770982336,
+      "processing_end_time": 1770982445
+    }
   },
-  "doc-78aea57af926402f2f1f8460d628871d": {
-    "status": "failed",
-    "error_msg": "Vector count mismatch: expected 3 vectors but got 6 vectors (from embedding result).",
-    "content_summary": "中阶成语词典 (Selected Idioms Dictionary)\n第一组：形容处世与态度 (1-10)\n\n    【虚与委蛇】\n\n        拼音： xū yǔ wēi yí\n\n        释义： 指对人虚情假意，敷衍应酬。注意“蛇”在这里读 yí。\n\n    【颐指气使】\n\n        拼音： yí zhǐ qì shǐ\n\n        释义： 不说话而用面部表情示意。形容有权势的人指挥别人的傲慢神气。\n\n    【刚愎自用】\n\n        拼音： gāng bì zì...",
-    "content_length": 3759,
-    "created_at": "2026-02-08T09:51:18.865804+00:00",
-    "updated_at": "2026-02-08T09:53:07.323368+00:00",
-    "file_path": "成语.txt",
-    "track_id": "insert_20260208_175118_8eed4aec",
+  "doc-53729bcdd31f073b8dbc4d8a639f0580": {
+    "status": "processed",
+    "chunks_count": 2,
+    "chunks_list": [
+      "chunk-8ef94f588ef70d0bd8967e7353481a56",
+      "chunk-29d2df4d26a3885b820e69482a2d3ea7"
+    ],
+    "content_summary": "集成电路制造工艺 (IC Manufacturing Process)\n1. 概述\n\n集成电路制造工艺是指在硅片（Wafer）表面上，通过一系列物理和化学方法，制造出由数亿甚至数百亿个晶体管、电阻、电容等元件构成的微型电子电路的过程。这一过程通常被称为半导体工艺或晶圆制造（Wafer Fabrication）。\n\n现代集成电路制造是人类历史上最精密、最复杂的工业生产过程之一，通常需要在洁净度极高（Class 1或更高）的无尘室（Cleanroom）中进行。整个制造流程可以分为前道工艺（Front...",
+    "content_length": 2593,
+    "created_at": "2026-02-13T11:42:38.999500+00:00",
+    "updated_at": "2026-02-13T11:43:33.648080+00:00",
+    "file_path": "集成电路制造工艺.txt",
+    "track_id": "insert_20260213_194238_03833c82",
     "metadata": {
-      "processing_start_time": 1770544385,
-      "processing_end_time": 1770544387
-    },
-    "chunks_list": []
+      "processing_start_time": 1770982959,
+      "processing_end_time": 1770983013
+    }
   }
 }
