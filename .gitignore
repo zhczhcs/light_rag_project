@@ -54,6 +54,7 @@ docs/
 .roo/
 
 # Debug / test / benchmark scripts
+benchmark/
 benchmark_*
 check_*
 clear_cache.py
