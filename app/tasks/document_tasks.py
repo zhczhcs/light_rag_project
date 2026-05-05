@@ -28,7 +28,7 @@ def _get_worker_loop() -> asyncio.AbstractEventLoop:
     default_retry_delay=60,
     acks_late=True,
 )
-def process_document_task(self, text_content: str, filename: str, doc_id: int = -1, user_id: int = -1):
+def process_document_task(self, text_content: str, filename: str, doc_id: int = -1, user_id: int = -1, workspace: str = None):
     """
     文档处理主任务（同步入口，内部运行异步逻辑）
 
@@ -36,12 +36,13 @@ def process_document_task(self, text_content: str, filename: str, doc_id: int = 
         text_content: 已解析的文档文本内容
         filename:     原始文件名（用于数据库状态更新）
         doc_id:       数据库主键（防重：若文档已被删除则跳过）
-        user_id:      上传用户ID（用于连接用户专属 RAG 引擎，实现数据隔离）
+        user_id:      上传用户ID（用于数据库过滤）
+        workspace:    工作空间标识（dept_X 或 user_X，用于 RAG 引擎隔离）
     """
     try:
-        print(f"📋 [Celery] 任务开始: {filename} (task_id={self.request.id}, doc_id={doc_id}, user_id={user_id})")
+        print(f"📋 [Celery] 任务开始: {filename} (task_id={self.request.id}, doc_id={doc_id}, user_id={user_id}, workspace={workspace})")
         loop = _get_worker_loop()
-        loop.run_until_complete(_run_processing(text_content, filename, doc_id, user_id))
+        loop.run_until_complete(_run_processing(text_content, filename, doc_id, user_id, workspace))
         print(f"✅ [Celery] 任务完成: {filename}")
     except Exception as exc:
         print(f"❌ [Celery] 任务失败: {filename}, 错误: {exc}")
@@ -49,13 +50,14 @@ def process_document_task(self, text_content: str, filename: str, doc_id: int = 
         raise self.retry(exc=exc, countdown=60)
 
 
-async def _run_processing(text_content: str, filename: str, doc_id: int = -1, user_id: int = -1):
+async def _run_processing(text_content: str, filename: str, doc_id: int = -1, user_id: int = -1, workspace: str = None):
     """
     异步处理逻辑（在 Celery worker 进程中执行）
 
     注意：Celery worker 是独立进程，globals.rag_engine 默认为 None，
-    使用 get_user_engine 按用户懒初始化引擎，实现数据隔离。
+    使用 get_workspace_engine 按 workspace 懒初始化引擎，实现数据隔离。
     """
+    from app.rag.engine import get_workspace_engine, invalidate_workspace_engine, mark_engine_dirty_workspace
     from app.rag.engine import get_user_engine, invalidate_user_engine, mark_engine_dirty
     from app.services.rag_service import process_doc_background
     from app.database import SessionLocal, DocumentModel
@@ -71,18 +73,18 @@ async def _run_processing(text_content: str, filename: str, doc_id: int = -1, us
         finally:
             db_check.close()
 
-    # 获取用户专属引擎（懒初始化：首次使用时自动创建该用户的 collection 和 working_dir）
-    if user_id != -1:
+    # 优先使用 workspace 引擎（部门隔离），其次回退到用户引擎
+    if workspace:
         # ⚠️ 关键修复：先 invalidate 再 get，强制从磁盘重建引擎
-        # 原因：删除文档在 FastAPI 进程中执行 invalidate_user_engine()，
-        #        但 Celery Worker 是独立进程，其 _user_engines 缓存不会被清除。
-        #        如果复用旧引擎，LightRAG 内存中的 kv_store 仍有已删除的 doc_id，
-        #        导致重新上传时报 "Ignoring document ID (already exists)"。
+        invalidate_workspace_engine(workspace)
+        await get_workspace_engine(workspace)
+        print(f"✅ [Celery Worker] workspace '{workspace}' 的引擎已就绪")
+    elif user_id != -1:
         invalidate_user_engine(user_id)
         await get_user_engine(user_id)
         print(f"✅ [Celery Worker] 用户 {user_id} 的专属引擎已就绪")
     else:
-        # 兼容旧任务（无 user_id）：回退到全局引擎
+        # 兼容旧任务（无 user_id/workspace）：回退到全局引擎
         from app.core import globals
         from app.rag.engine import get_rag_engine
         if globals.rag_engine is None:
@@ -90,9 +92,11 @@ async def _run_processing(text_content: str, filename: str, doc_id: int = -1, us
             globals.rag_engine = get_rag_engine()
             await globals.rag_engine.initialize_storages()
 
-    # 调用文档处理逻辑（传入 user_id 让它使用正确的引擎）
-    await process_doc_background(text_content, filename, user_id if user_id != -1 else None)
+    # 调用文档处理逻辑（传入 workspace 或 user_id 让它使用正确的引擎）
+    await process_doc_background(text_content, filename, user_id if user_id != -1 else None, workspace)
 
     # 🏴 索引完成后标记 dirty，通知 FastAPI 进程下次查询时重建引擎
-    if user_id != -1:
+    if workspace:
+        mark_engine_dirty_workspace(workspace)
+    elif user_id != -1:
         mark_engine_dirty(user_id)

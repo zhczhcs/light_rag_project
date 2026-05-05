@@ -79,7 +79,8 @@ class TablePrinter:
                            让 WARNING 前缀落在空行上，表格内容从新行开始）
         """
         self.headers = headers
-        self.col_widths = col_widths
+        # 全局增加 3 的余量，避免截断省略号导致右侧框线错位
+        self.col_widths = [w + 3 for w in col_widths]
         self.title = title
         self.align = align
         self.prefix_newline = prefix_newline
@@ -134,8 +135,8 @@ class TablePrinter:
         # 标题行（显示宽度居中）
         if self.title:
             total_inner = sum(self.col_widths) + 3 * len(self.col_widths) - 1
-            lines.append(f"┌{'─' * (total_inner + 2)}┐")
-            lines.append(f"│ {_pad_center(self.title, total_inner)} │")
+            lines.append(self._make_horizontal("┌", "┬", "┐"))
+            lines.append(f"│{_pad_center(self.title, total_inner)}│")
             lines.append(self._make_horizontal("├", "┼", "┤"))
         else:
             lines.append(self._make_horizontal(self.corner_tl, self.cross_top, self.corner_tr))

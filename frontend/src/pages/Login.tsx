@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Card, Tabs, message } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Form, Input, Button, Card, Tabs, message, Select } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const Login: React.FC<{ onLoginSuccess: () => void }> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    axios.get('http://localhost:8000/api/auth/departments')
+      .then(res => setDepartments(res.data))
+      .catch(() => {});
+  }, []);
 
   const handleLogin = async (values: any) => {
     setLoading(true);
@@ -35,7 +42,8 @@ const Login: React.FC<{ onLoginSuccess: () => void }> = ({ onLoginSuccess }) => 
       await axios.post('http://localhost:8000/api/auth/register', {
         username: values.username,
         email: values.email,
-        password: values.password
+        password: values.password,
+        department_id: values.department_id
       });
       message.success('注册成功，请登录');
     } catch (error: any) {
@@ -71,6 +79,13 @@ const Login: React.FC<{ onLoginSuccess: () => void }> = ({ onLoginSuccess }) => 
       </Form.Item>
       <Form.Item name="password" rules={[{ required: true, message: '请输入密码!' }]}>
         <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
+      </Form.Item>
+      <Form.Item name="department_id" rules={[{ required: true, message: '请选择所属部门!' }]}>
+        <Select placeholder="请选择所属部门" size="large">
+          {departments.map(d => (
+            <Select.Option key={d.id} value={d.id}>{d.name}</Select.Option>
+          ))}
+        </Select>
       </Form.Item>
       <Form.Item>
         <Button type="primary" htmlType="submit" loading={loading} block size="large">

@@ -19,6 +19,21 @@ celery_app = Celery(
     include=["app.tasks.document_tasks"],  # 自动发现任务
 )
 
+# ← 队列路由：默认任务发到 local 队列，避免与其他 Worker 竞争
+celery_app.conf.task_default_queue = "local"
+celery_app.conf.task_queues = {
+    "local": {
+        "exchange": "local",
+        "exchange_type": "direct",
+        "binding_key": "local",
+    },
+    "celery": {  # 保留默认队列兼容
+        "exchange": "celery",
+        "exchange_type": "direct",
+        "binding_key": "celery",
+    },
+}
+
 celery_app.conf.update(
     # 序列化格式
     task_serializer="json",
@@ -37,7 +52,12 @@ celery_app.conf.update(
         "socket_timeout": 10,                  # Redis socket 超时 10s
         "socket_connect_timeout": 5,           # 连接超时 5s
         "retry_on_timeout": True,              # 超时自动重试
+        "socket_keepalive": True,              # 启用 TCP keepalive，防止 NAT/防火墙断开空闲连接
     },
+
+    # ← 心跳保活：定期向 broker 发送心跳，防止长时间无任务时连接被中间件断开
+    broker_heartbeat=30,                        # 每 30s 发送一次心跳
+    broker_heartbeat_checkrate=3,               # 心跳检查频率（每 10s 检查一次）
 
     # 可靠性配置
     task_acks_late=True,             # 任务执行完成后才确认，防止 Worker 崩溃丢任务

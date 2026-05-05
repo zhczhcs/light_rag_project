@@ -80,7 +80,7 @@ Write-Host ""
 Write-Host "[2/3] Starting Celery Worker..." -ForegroundColor Yellow
 $celeryCmd = @"
 `$host.ui.RawUI.WindowTitle = 'LightRAG - Celery Worker'
-& '$PythonExe' -m celery -A app.tasks.celery_app worker --loglevel=info
+& '$PythonExe' -m celery -A app.tasks.celery_app worker --loglevel=info -Q local
 "@
 Start-ServiceWindow "Celery Worker" $celeryCmd $ProjectRoot
 Start-Sleep -Seconds 2

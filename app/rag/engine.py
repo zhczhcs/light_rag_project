@@ -545,21 +545,32 @@ def get_rag_engine():
 
 
 # ==========================================
-# 4. 用户级 RAG 引擎隔离（每用户独立 working_dir + Qdrant collection）
+# 4. Workspace 级 RAG 引擎隔离（部门共享或用户独占）
+#    workspace 格式：
+#      - 有部门用户：dept_{dept_id}  （同部门共享知识库）
+#      - 无部门用户：user_{user_id}  （仅自己访问）
 # ==========================================
-_user_engines: dict[int, LightRAG] = {}
+_user_engines: dict[str, LightRAG] = {}
 _engine_lock = asyncio.Lock()
 
 # Qdrant 服务器配置（复用模块顶部统一配置）
 
 
+# ── 旧的 user_id 版函数保留为向后兼容的包装器 ──
+
 def _create_engine_for_user(user_id: int) -> LightRAG:
-    """为指定用户创建独立的 LightRAG 引擎（共享 working_dir，通过 workspace 隔离）"""
-    # working_dir 统一为 ./data，LightRAG 会在其下自动创建 workspace 子目录 (./data/user_X/)
+    """向后兼容：按用户ID创建引擎（内部委托 workspace 版）"""
+    return _create_engine_for_workspace(f"user_{user_id}")
+
+
+def _create_engine_for_workspace(workspace: str) -> LightRAG:
+    """为指定 workspace 创建独立的 LightRAG 引擎（共享 working_dir，通过 workspace 隔离）
+
+    Args:
+        workspace: 隔离标识，格式为 dept_{id} 或 user_{id}
+    """
     os.makedirs(WORKING_DIR, exist_ok=True)
 
-    # LightRAG 的 QdrantVectorDBStorage 在初始化时会校验这三个环境变量是否存在
-    # Celery Worker 是独立进程，不会经过 get_rag_engine()，必须在此处手动注入
     os.environ["QDRANT_URL"] = _QDRANT_URL
     if _QDRANT_API_KEY is not None:
         os.environ["QDRANT_API_KEY"] = _QDRANT_API_KEY
@@ -567,54 +578,64 @@ def _create_engine_for_user(user_id: int) -> LightRAG:
 
     return LightRAG(
         working_dir=WORKING_DIR,
-        workspace=f"user_{user_id}",  # 关键：LightRAG 自动在 working_dir 下创建 user_X/ 子目录 + Qdrant workspace_id 隔离
-        chunk_token_size=800,              # 默认 1200，降到 800 减少单 chunk token 数，6 chunks≈4800 tokens
-        chunk_overlap_token_size=100,      # 保持默认 100，相邻 chunk 有 100 token 重叠保证上下文连贯
+        workspace=workspace,
+        chunk_token_size=800,
+        chunk_overlap_token_size=100,
         vector_storage="QdrantVectorDBStorage",
         vector_db_storage_cls_kwargs={
             "url": _QDRANT_URL,
             "api_key": _QDRANT_API_KEY,
-            # collection_name 被 LightRAG 忽略（内部硬编码 lightrag_vdb_*），多租户靠 workspace 隔离
             "prefer_grpc": False
         },
         llm_model_func=bailian_llm,
-        llm_model_max_async=6,   # 默认 4，提升到 6 让多 chunk 并行提取，对大文档有明显收益
+        llm_model_max_async=6,
         embedding_func=EmbeddingFunc(
             embedding_dim=1536,
             max_token_size=8192,
             func=bailian_embedding,
         ),
-        # 🔄 Rerank：用阿里云 qwen3-rerank 对检索结果重排序，高分 chunk 排前面
         rerank_model_func=partial(
             _logged_rerank,
             api_key=os.environ.get("ALI_API_KEY"),
             model=_RERANK_MODEL,
             base_url=_RERANK_BASE_URL,
         ),
-        min_rerank_score=0.37,  # 丢弃 Rerank 分数 < 0.37 的低相关 chunk
+        min_rerank_score=0.37,
     )
 
 
 def _dirty_flag_path(user_id: int) -> str:
-    """返回用户引擎脏标记文件路径"""
-    return os.path.join(WORKING_DIR, f"user_{user_id}", ".engine_dirty")
+    """向后兼容：返回用户引擎脏标记文件路径"""
+    return _dirty_flag_path_workspace(f"user_{user_id}")
+
+
+def _dirty_flag_path_workspace(workspace: str) -> str:
+    """返回 workspace 引擎脏标记文件路径"""
+    return os.path.join(WORKING_DIR, workspace, ".engine_dirty")
 
 
 def mark_engine_dirty(user_id: int):
-    """
-    标记用户引擎数据已变更（跨进程信号）。
-    Celery Worker 索引/删除文档后调用此函数，FastAPI 进程下次查询时会感知并重建引擎。
-    """
-    flag_path = _dirty_flag_path(user_id)
+    """向后兼容：标记用户引擎 dirty"""
+    mark_engine_dirty_workspace(f"user_{user_id}")
+
+
+def mark_engine_dirty_workspace(workspace: str):
+    """标记 workspace 引擎数据已变更（跨进程信号）"""
+    flag_path = _dirty_flag_path_workspace(workspace)
     os.makedirs(os.path.dirname(flag_path), exist_ok=True)
     with open(flag_path, "w") as f:
         f.write(str(time.time()))
-    print(f"🏴 [Engine] 用户 {user_id} 的引擎已标记为 dirty（跨进程信号）")
+    print(f"🏴 [Engine] workspace '{workspace}' 的引擎已标记为 dirty（跨进程信号）")
 
 
 def _check_and_clear_dirty(user_id: int) -> bool:
-    """检查用户引擎是否被标记为 dirty，如果是则清除标记并返回 True"""
-    flag_path = _dirty_flag_path(user_id)
+    """向后兼容：检查用户引擎 dirty 标记"""
+    return _check_and_clear_dirty_workspace(f"user_{user_id}")
+
+
+def _check_and_clear_dirty_workspace(workspace: str) -> bool:
+    """检查 workspace 引擎是否被标记为 dirty，如果是则清除并返回 True"""
+    flag_path = _dirty_flag_path_workspace(workspace)
     if os.path.exists(flag_path):
         try:
             os.remove(flag_path)
@@ -625,16 +646,12 @@ def _check_and_clear_dirty(user_id: int) -> bool:
 
 
 def _clear_workspace_shared_data(user_id: int):
-    """
-    清除该用户 workspace 在 LightRAG shared_storage 中的所有缓存。
-    解决跨进程重建引擎时 KV store 不从磁盘重新加载的问题。
-    
-    原理：LightRAG 的 JsonKVStorage 使用全局 _init_flags 和 _shared_dicts 
-    来避免重复初始化。当 Celery 索引新文档并写入 JSON 文件后，
-    FastAPI 进程必须清除这些标记才能强制下次 initialize() 重新读取磁盘。
-    """
-    workspace = f"user_{user_id}"
-    # LightRAG 使用的 namespace 名称（见 lightrag/utils.py NameSpace 枚举）
+    """向后兼容：清除用户 workspace 缓存"""
+    _clear_workspace_shared_data_workspace(f"user_{user_id}")
+
+
+def _clear_workspace_shared_data_workspace(workspace: str):
+    """清除指定 workspace 在 LightRAG shared_storage 中的所有缓存"""
     namespaces = [
         "text_chunks", "full_docs", "full_entities", "full_relations",
         "entity_chunks", "relation_chunks", "llm_response_cache",
@@ -649,35 +666,52 @@ def _clear_workspace_shared_data(user_id: int):
         if _shared_dicts is not None and key in _shared_dicts:
             del _shared_dicts[key]
     if cleared > 0:
-        print(f"🧹 [Engine] 已清除用户 {user_id} 的 {cleared} 个 namespace 缓存标记，下次 initialize 将从磁盘重新加载")
+        print(f"🧹 [Engine] 已清除 workspace '{workspace}' 的 {cleared} 个 namespace 缓存标记")
+
+
+async def get_workspace_engine(workspace: str) -> LightRAG:
+    """获取或懒加载指定 workspace 的 RAG 引擎（线程安全 + 跨进程脏标记检测）
+
+    Args:
+        workspace: 隔离标识，格式为 dept_{id}（部门共享）或 user_{id}（用户独占）
+    """
+    import time
+    if workspace in _user_engines and _check_and_clear_dirty_workspace(workspace):
+        print(f"🔄 [Engine] 检测到 workspace '{workspace}' 的 dirty 标记，丢弃旧引擎并重建...")
+        del _user_engines[workspace]
+        _clear_workspace_shared_data_workspace(workspace)
+
+    if workspace in _user_engines:
+        return _user_engines[workspace]
+
+    async with _engine_lock:
+        if workspace not in _user_engines:
+            _engine_start = time.time()
+            print(f"🔄 [Engine] 为 workspace '{workspace}' 创建独立 RAG 引擎...")
+            engine = _create_engine_for_workspace(workspace)
+            _init_start = time.time()
+            await engine.initialize_storages()
+            _init_cost = time.time() - _init_start
+            _total_cost = time.time() - _engine_start
+            _user_engines[workspace] = engine
+            print(f"✅ [Engine] workspace '{workspace}' 的引擎已就绪 (create={_total_cost - _init_cost:.2f}s, init={_init_cost:.2f}s, total={_total_cost:.2f}s)")
+
+    return _user_engines[workspace]
 
 
 async def get_user_engine(user_id: int) -> LightRAG:
-    """获取或懒加载用户专属 RAG 引擎（线程安全 + 跨进程脏标记检测）"""
-    # 🔍 跨进程脏标记检测：Celery 索引完文档后会写 .engine_dirty 文件
-    #    FastAPI 进程在这里检测到后，丢弃旧引擎，从磁盘重建
-    if user_id in _user_engines and _check_and_clear_dirty(user_id):
-        print(f"🔄 [Engine] 检测到用户 {user_id} 的 dirty 标记，丢弃旧引擎并重建...")
-        del _user_engines[user_id]
-        _clear_workspace_shared_data(user_id)  # 清除共享内存中的旧 KV 数据，强制从磁盘重新加载
+    """向后兼容：按用户ID获取引擎（无部门场景）"""
+    return await get_workspace_engine(f"user_{user_id}")
 
-    if user_id in _user_engines:
-        return _user_engines[user_id]
 
-    async with _engine_lock:
-        if user_id not in _user_engines:
-            print(f"🔄 [Engine] 为用户 {user_id} 创建独立 RAG 引擎 (collection: user_{user_id}_vdb)...")
-            engine = _create_engine_for_user(user_id)
-            await engine.initialize_storages()
-            _user_engines[user_id] = engine
-            print(f"✅ [Engine] 用户 {user_id} 的引擎已就绪")
-
-    return _user_engines[user_id]
+def invalidate_workspace_engine(workspace: str):
+    """删除文档后清除 workspace 引擎缓存，下次访问时重新初始化"""
+    if workspace in _user_engines:
+        del _user_engines[workspace]
+        _clear_workspace_shared_data_workspace(workspace)
+        print(f"🔄 [Engine] workspace '{workspace}' 的引擎缓存已清除")
 
 
 def invalidate_user_engine(user_id: int):
-    """删除文档后清除用户引擎缓存，下次访问时重新初始化"""
-    if user_id in _user_engines:
-        del _user_engines[user_id]
-        _clear_workspace_shared_data(user_id)
-        print(f"🔄 [Engine] 用户 {user_id} 的引擎缓存已清除")
+    """向后兼容：按用户ID清除引擎缓存"""
+    invalidate_workspace_engine(f"user_{user_id}")
