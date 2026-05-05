@@ -18,9 +18,9 @@ from openai import AsyncOpenAI
 from app.core.globals import model_context, metrics_context  # ✅ 引入监控上下文
 from app.utils.table_printer import print_kv_table, print_simple_table
 
-_QDRANT_HOST = os.environ.get("QDRANT_HOST", "106.52.15.237")
-_QDRANT_PORT = os.environ.get("QDRANT_PORT", "4399")
-_QDRANT_URL = os.environ.get("QDRANT_URL", f"http://{_QDRANT_HOST}:{_QDRANT_PORT}")
+_QDRANT_HOST = os.environ.get("QDRANT_HOST")
+_QDRANT_PORT = os.environ.get("QDRANT_PORT")
+_QDRANT_URL = os.environ.get("QDRANT_URL")
 _QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
 
 # ── 覆盖 LightRAG 默认英文无结果提示 → 中文 ──
@@ -79,7 +79,7 @@ def _inject_ref_ids_into_chunks(system_prompt: str) -> str:
 
 # ── Rerank 配置 ──
 # qwen3-rerank：更便宜(0.0005/千token)，支持 instruct 参数
-_RERANK_MODEL = os.environ.get("RERANK_MODEL", "qwen3-rerank")
+_RERANK_MODEL = os.environ.get("RERANK_MODEL")
 _RERANK_BASE_URL = "https://dashscope.aliyuncs.com/compatible-api/v1/reranks"
 _MAX_RERANK_CHUNKS = 6  # Rerank 后最多保留的 chunk 数，减少 LLM 上下文 token 消耗
 
@@ -315,7 +315,7 @@ async def bailian_llm(prompt, system_prompt=None, history_messages=[], **kwargs)
         model_name = dynamic_model
     else:
         # 索引阶段：读 LLM_INDEXING_MODEL 环境变量，默认 qwen3.5-flash
-        model_name = os.environ.get("LLM_INDEXING_MODEL", "qwen3.5-plus")
+        model_name = os.environ.get("LLM_INDEXING_MODEL")
         if not hasattr(bailian_llm, "_indexing_model_logged"):
             print(f"🏗️  [Indexing LLM] 实体提取使用模型: {model_name}")
             bailian_llm._indexing_model_logged = True
@@ -507,7 +507,8 @@ def get_rag_engine():
         os.mkdir(WORKING_DIR)
 
     # 注入环境变量
-    os.environ["QDRANT_URL"] = _QDRANT_URL
+    if _QDRANT_URL:
+        os.environ["QDRANT_URL"] = _QDRANT_URL
     if _QDRANT_API_KEY is not None:
         os.environ["QDRANT_API_KEY"] = _QDRANT_API_KEY
     os.environ["VECTOR_STORAGE"] = "QdrantVectorDBStorage"
@@ -571,7 +572,8 @@ def _create_engine_for_workspace(workspace: str) -> LightRAG:
     """
     os.makedirs(WORKING_DIR, exist_ok=True)
 
-    os.environ["QDRANT_URL"] = _QDRANT_URL
+    if _QDRANT_URL:
+        os.environ["QDRANT_URL"] = _QDRANT_URL
     if _QDRANT_API_KEY is not None:
         os.environ["QDRANT_API_KEY"] = _QDRANT_API_KEY
     os.environ["VECTOR_STORAGE"] = "QdrantVectorDBStorage"

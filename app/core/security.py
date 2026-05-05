@@ -8,7 +8,13 @@ from fastapi.security import OAuth2PasswordBearer
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-change-in-production-min-32-chars")
+SECRET_KEY = os.environ.get("SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY 未设置：请配置 SECRET_KEY 环境变量（至少 32 位随机字符串），"
+        "或在项目根目录创建 .env 文件。"
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 120
 REFRESH_TOKEN_EXPIRE_DAYS = 7

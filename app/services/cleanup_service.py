@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 from app.database import DocumentModel
 from app.rag.engine import invalidate_user_engine, invalidate_workspace_engine
 
-# Qdrant 配置（优先环境变量，默认端口 4399）
-QDRANT_HOST = os.environ.get("QDRANT_HOST", "106.52.15.237")
-QDRANT_PORT = os.environ.get("QDRANT_PORT", "4399")
-QDRANT_URL = os.environ.get("QDRANT_URL", f"http://{QDRANT_HOST}:{QDRANT_PORT}")
+# Qdrant 配置（优先环境变量）
+QDRANT_HOST = os.environ.get("QDRANT_HOST")
+QDRANT_PORT = os.environ.get("QDRANT_PORT")
+QDRANT_URL = os.environ.get("QDRANT_URL")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
 
 # LightRAG 固定的 Qdrant 集合名（全部用户共用同一组集合，通过 workspace_id 字段隔离数据）

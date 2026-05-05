@@ -25,11 +25,17 @@ import os
 # =========================================================
 # 1. 数据库配置（直连模式）
 # =========================================================
-db_host = os.environ.get("MYSQL_HOST", "106.52.15.237")
-db_port = int(os.environ.get("MYSQL_PORT", "43960"))
-db_user = os.environ.get("MYSQL_USER", "zhczhcs")
-db_password = os.environ.get("MYSQL_PASSWORD", "Zhc29606900")
+db_host = os.environ.get("MYSQL_HOST")
+db_port = int(os.environ.get("MYSQL_PORT", "3306"))
+db_user = os.environ.get("MYSQL_USER")
+db_password = os.environ.get("MYSQL_PASSWORD")
 db_name = os.environ.get("MYSQL_DB", "lightrag_db")
+
+if not db_host or not db_user or not db_password:
+    raise RuntimeError(
+        "数据库配置缺失：请设置 MYSQL_HOST、MYSQL_USER、MYSQL_PASSWORD 环境变量，"
+        "或在项目根目录创建 .env 文件。"
+    )
 
 # # =========================================================
 # # [已废弃] SSH 隧道相关函数
@@ -78,6 +84,11 @@ engine = create_engine(
     pool_size=5,
     max_overflow=10,
     pool_timeout=30,
+    connect_args={
+        "read_timeout": 30,
+        "write_timeout": 30,
+        "connect_timeout": 10,
+    }
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
