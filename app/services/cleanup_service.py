@@ -4,7 +4,7 @@ import httpx
 import networkx as nx
 from sqlalchemy.orm import Session
 from app.database import DocumentModel
-from app.rag.engine import invalidate_user_engine
+from app.rag.engine import invalidate_user_engine, invalidate_workspace_engine
 
 # Qdrant 配置（优先环境变量，默认端口 4399）
 QDRANT_HOST = os.environ.get("QDRANT_HOST", "106.52.15.237")
@@ -19,16 +19,20 @@ QDRANT_COLLECTIONS = [
     "lightrag_vdb_chunks",
 ]
 
-def _workspace_id(user_id: int = None) -> str:
+def _workspace_id(user_id: int = None, workspace: str = None) -> str:
     """LightRAG 在 Qdrant payload 中用 workspace_id 字段隔离数据，与 engine.py 的 workspace 参数保持一致"""
+    if workspace:
+        return workspace
     return f"user_{user_id}" if user_id else "_"
 
-async def perform_delete_all_documents(db: Session, user_id: int = None):
-    print(f"🗑️ [DeleteAll] 准备删除用户 {user_id} 的所有文档...")
+async def perform_delete_all_documents(db: Session, workspace: str = None, department_id: int = None, user_id: int = None):
+    print(f"🗑️ [DeleteAll] 准备删除 workspace='{workspace}' 的所有文档...")
     
     # 第一步：获取所有文档的文件名
     query = db.query(DocumentModel)
-    if user_id:
+    if department_id:
+        query = query.filter(DocumentModel.department_id == department_id)
+    elif user_id:
         query = query.filter(DocumentModel.user_id == user_id)
     docs = query.all()
     filenames = [doc.filename for doc in docs]
@@ -40,7 +44,7 @@ async def perform_delete_all_documents(db: Session, user_id: int = None):
     print(f"📋 [DeleteAll] 找到 {len(filenames)} 个文档需要删除: {filenames}")
     
     # LightRAG 的 Qdrant 实现固定使用 lightrag_vdb_* 集合，通过 workspace_id payload 字段隔离用户数据
-    ws_id = _workspace_id(user_id)
+    ws_id = _workspace_id(user_id, workspace)
     collection_names = QDRANT_COLLECTIONS
     
     print(f"🎯 [DeleteAll] 将从以下集合中删除 workspace_id='{ws_id}' 的数据: {', '.join(collection_names)}")
@@ -90,8 +94,8 @@ async def perform_delete_all_documents(db: Session, user_id: int = None):
     
     # 第四步：清理本地文件 (Surgical Cleanup - Total Wipeout)
     print(f"🧹 [DeleteAll] 正在清理本地存储文件...")
-    # LightRAG workspace: working_dir(./data)/user_X/
-    data_dir = f"./data/user_{user_id}" if user_id else "./data"
+    # LightRAG workspace: working_dir(./data)/{workspace}/
+    data_dir = f"./data/{workspace}" if workspace else (f"./data/user_{user_id}" if user_id else "./data")
     if user_id and not os.path.exists(data_dir):
         print(f"⚠️ [DeleteAll] 数据目录不存在: {data_dir}")
     deleted_files_count = 0
@@ -120,16 +124,21 @@ async def perform_delete_all_documents(db: Session, user_id: int = None):
     # 第五步：删除 MySQL 中的所有文档记录
     print(f"🗃️ [DeleteAll] 正在从 MySQL 删除文档记录...")
     del_query = db.query(DocumentModel)
-    if user_id:
+    if department_id:
+        del_query = del_query.filter(DocumentModel.department_id == department_id)
+    elif user_id:
         del_query = del_query.filter(DocumentModel.user_id == user_id)
-    deleted_count = del_query.delete()
+    deleted_count = del_query.delete(synchronize_session=False)
     db.commit()
     print(f"✅ [DeleteAll] MySQL 记录删除成功！共删除 {deleted_count} 条记录")
     
     # 提示重启
     print(f"\n💡 [DeleteAll] 删除操作已完成，正在使缓存引擎失效...")
     try:
-        invalidate_user_engine(user_id)
+        if workspace:
+            invalidate_workspace_engine(workspace)
+        else:
+            invalidate_user_engine(user_id)
         print(f"✅ [DeleteAll] 引擎缓存已清除！")
     except Exception as e:
         print(f"⚠️ [DeleteAll] 引擎缓存清除失败: {str(e)}")
@@ -137,7 +146,7 @@ async def perform_delete_all_documents(db: Session, user_id: int = None):
     return {"message": "删除成功", "deleted_count": deleted_count}
 
 
-async def perform_delete_document(doc_id: int, db: Session, user_id: int = None):
+async def perform_delete_document(doc_id: int, db: Session, workspace: str = None, user_id: int = None):
     # 第一步：根据 doc_id 查询 MySQL，拿到该文档的 filename
     doc = db.query(DocumentModel).filter(DocumentModel.id == doc_id).first()
     if not doc:
@@ -147,7 +156,7 @@ async def perform_delete_document(doc_id: int, db: Session, user_id: int = None)
     print(f"🗑️ [Delete] 准备删除文档: {filename} (ID: {doc_id}, user_id: {user_id})")
     
     # LightRAG Qdrant 固定集合名，通过 workspace_id 隔离用户数据
-    ws_id = _workspace_id(user_id)
+    ws_id = _workspace_id(user_id, workspace)
     chunks_collection = "lightrag_vdb_chunks"
     entities_collection = "lightrag_vdb_entities"
     relationships_collection = "lightrag_vdb_relationships"
@@ -220,7 +229,7 @@ async def perform_delete_document(doc_id: int, db: Session, user_id: int = None)
         print(f"⚠️ [Step 1] 无法从 Qdrant 获取 Full Doc ID，尝试从本地 kv_store 查找...")
         
         # 回退方案：从本地 kv_store_doc_status.json 按 file_path 匹配
-        fallback_data_dir = f"./data/user_{user_id}" if user_id else "./data"
+        fallback_data_dir = f"./data/{workspace}" if workspace else (f"./data/user_{user_id}" if user_id else "./data")
         
         doc_status_path = os.path.join(fallback_data_dir, "kv_store_doc_status.json")
         if os.path.exists(doc_status_path):
@@ -241,6 +250,42 @@ async def perform_delete_document(doc_id: int, db: Session, user_id: int = None)
     
     # 无论 full_doc_id 来自 Qdrant 还是本地回退，都尝试 Qdrant 清理
     all_point_ids = []
+    
+    # 当 full_doc_id 为空时（如之前索引失败导致 Qdrant 有向量但本地 JSON 无记录），
+    # 按 file_path + workspace_id 直接查找并删除 Qdrant 中的残留向量
+    if not full_doc_id:
+        print(f"\n🔍 [Step 2b] full_doc_id 为空，按文件名直接清理 Qdrant 残留...")
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                scroll_url = f"{QDRANT_URL}/collections/{chunks_collection}/points/scroll"
+                scroll_payload = {
+                    "filter": {
+                        "must": [
+                            {"key": "file_path", "match": {"value": filename}},
+                            {"key": "workspace_id", "match": {"value": ws_id}}
+                        ]
+                    },
+                    "limit": 1000,
+                    "with_payload": False
+                }
+                response = await client.post(scroll_url, headers={"api-key": QDRANT_API_KEY, "Content-Type": "application/json"}, json=scroll_payload)
+                if response.status_code == 200:
+                    data = response.json()
+                    points = data.get("result", {}).get("points", [])
+                    if points:
+                        point_ids = [str(p["id"]) for p in points]
+                        delete_url = f"{QDRANT_URL}/collections/{chunks_collection}/points/delete"
+                        del_response = await client.post(delete_url, headers={"api-key": QDRANT_API_KEY, "Content-Type": "application/json"}, json={"points": point_ids})
+                        if del_response.status_code == 200:
+                            print(f"✅ [Step 2b] 按文件名清理 Qdrant chunks 成功: {len(point_ids)} 个")
+                        else:
+                            print(f"⚠️ [Step 2b] 清理 chunks 失败: {del_response.status_code}")
+                    else:
+                        print(f"ℹ️ [Step 2b] Qdrant 中无该文件名的残留 chunks")
+                else:
+                    print(f"⚠️ [Step 2b] scroll 查询失败: {response.status_code}")
+        except Exception as e:
+            print(f"❌ [Step 2b] 按文件名清理 Qdrant 异常: {e}")
     
     if full_doc_id:
         # ==========================================
@@ -574,30 +619,27 @@ async def perform_delete_document(doc_id: int, db: Session, user_id: int = None)
     # ==========================================
     print(f"\n🧹 [Step 7] 正在进行本地文件外科手术...")
     # LightRAG workspace: working_dir(./data)/user_X/
-    data_dir = f"./data/user_{user_id}" if user_id else "./data"
+    data_dir = f"./data/{workspace}" if workspace else (f"./data/user_{user_id}" if user_id else "./data")
     
     if not full_doc_id:
-        print(f"⚠️ [Step 7] 无 Full Doc ID，跳过本地文件清理")
+        # 即使 Qdrant 中找不到 Full Doc ID（如之前索引失败），也要按文件名强制清理本地残留
+        print(f"⚠️ [Step 7] 无 Full Doc ID，按文件名 '{filename}' 强制清理本地残留...")
+        perform_local_cleanup_by_filename(data_dir, filename)
     else:
-        # Step 7.1 - 7.9 (Due to length, I will simplify the copy-paste but keep logic intact)
-        # For brevity in this thought, I assume I'll copy the full logic.
-        # But wait, I must put the full code in the tool call.
-        
-        # ... logic for local file cleanup ...
-        # I will include the full local cleanup logic here
-        
-        # [Simulating copy of local cleanup logic for prompt construction]
         perform_local_cleanup(data_dir, full_doc_id, all_chunk_payload_ids)
 
     # ==========================================
     # Step 8: 清除用户引擎缓存 (Hot Invalidate)
     # ==========================================
     print(f"\n🔄 [Step 8] 正在清除用户引擎缓存，下次查询时自动重载...")
-    if user_id:
+    if workspace:
+        invalidate_workspace_engine(workspace)
+        print(f"✅ [Step 8] workspace '{workspace}' 的引擎缓存已清除")
+    elif user_id:
         invalidate_user_engine(user_id)
         print(f"✅ [Step 8] 用户 {user_id} 的引擎缓存已清除")
     else:
-        print(f"⚠️ [Step 8] 无 user_id，跳过引擎缓存清除")
+        print(f"⚠️ [Step 8] 无 workspace/user_id，跳过引擎缓存清除")
 
     print(f"\n🎉 [Delete] 全链路级联删除完成！")
     
@@ -739,4 +781,39 @@ def perform_local_cleanup(data_dir, full_doc_id, all_chunk_payload_ids):
             print(f"✅ [Cleanup] graphml cleaned")
     except Exception as e:
         print(f"❌ [Cleanup] graphml failed: {e}")
+
+def perform_local_cleanup_by_filename(data_dir: str, filename: str):
+    """
+    按文件名强制清理本地残留数据（用于 Qdrant 中找不到 Full Doc ID 的情况）。
+    遍历所有本地 JSON 文件，删除 file_path 匹配的 doc_id 和关联的 chunks/entities/relations。
+    """
+    import re
+    
+    print(f"🧹 [CleanupByName] 按文件名 '{filename}' 清理本地残留...")
+    
+    # Step A: 从 doc_status 找到关联的 doc_id 和 chunks_list
+    full_doc_id = None
+    all_chunk_payload_ids = []
+    doc_status_file = os.path.join(data_dir, "kv_store_doc_status.json")
+    
+    try:
+        if os.path.exists(doc_status_file):
+            with open(doc_status_file, "r", encoding="utf-8") as f:
+                doc_status_data = json.load(f)
+            for doc_key, doc_val in doc_status_data.items():
+                if doc_val.get("file_path") == filename:
+                    full_doc_id = doc_key
+                    all_chunk_payload_ids = doc_val.get("chunks_list", [])
+                    break
+    except Exception as e:
+        print(f"⚠️ [CleanupByName] 读取 doc_status 失败: {e}")
+    
+    if not full_doc_id:
+        print(f"⚠️ [CleanupByName] 本地也未找到 '{filename}' 的残留，无需清理")
+        return
+    
+    print(f"✅ [CleanupByName] 找到残留: doc_id={full_doc_id}, chunks={len(all_chunk_payload_ids)}")
+    
+    # Step B: 复用 perform_local_cleanup 清理所有关联数据
+    perform_local_cleanup(data_dir, full_doc_id, all_chunk_payload_ids)
 

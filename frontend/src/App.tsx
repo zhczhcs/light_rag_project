@@ -692,19 +692,19 @@ const App: React.FC = () => {
       title: '文件名',
       dataIndex: 'filename',
       key: 'filename',
-      render: (text: string) => <span><FileTextOutlined /> {text}</span>,
-    },
-    {
-      title: '大小',
-      dataIndex: 'file_size',
-      key: 'file_size',
-      width: 80,
+      width: 150,
+      ellipsis: true,
+      render: (text: string) => (
+        <span style={{ wordBreak: 'break-all', whiteSpace: 'normal' }}>
+          <FileTextOutlined /> {text}
+        </span>
+      ),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 50,
       render: (status: string) => {
         let color = 'default';
         let text = status || '未知';
@@ -862,6 +862,13 @@ const App: React.FC = () => {
                     <div className="stat-value stat-value--danger">{docFailed}</div>
                   </div>
                 </div>
+
+                {currentUser?.department_name && (
+                  <div style={{ marginBottom: 12, padding: '6px 12px', background: '#e6f7ff', borderRadius: 6, fontSize: 13, color: '#096dd9', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>🏢</span>
+                    <span>当前部门：<strong>{currentUser.department_name}</strong></span>
+                  </div>
+                )}
 
                 <div className="filter-row">
                   <Input

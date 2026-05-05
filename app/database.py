@@ -1,5 +1,5 @@
 # import paramiko
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, ForeignKey, Text, event
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, ForeignKey, Text, event, text
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.pool import Pool
 from datetime import datetime
@@ -87,6 +87,14 @@ Base = declarative_base()
 # =========================================================
 # 3. 定义表模型
 # =========================================================
+class DepartmentModel(Base):
+    __tablename__ = "departments"
+
+    id = Column(Integer, primary_key=True, index=True, comment="主键ID")
+    name = Column(String(100), unique=True, nullable=False, comment="部门名称")
+    description = Column(String(255), nullable=True, comment="部门描述")
+    created_at = Column(DateTime, default=datetime.now, comment="创建时间")
+
 class UserModel(Base):
     __tablename__ = "users"
 
@@ -96,7 +104,10 @@ class UserModel(Base):
     hashed_password = Column(String(255), comment="加密密码")
     role = Column(String(20), default="user", comment="角色: user/admin")
     is_active = Column(Boolean, default=True, comment="是否启用")
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, comment="所属部门ID")
     created_at = Column(DateTime, default=datetime.now, comment="创建时间")
+
+    department = relationship("DepartmentModel", backref="users")
 
 class DocumentModel(Base):
     __tablename__ = "documents"
@@ -106,9 +117,11 @@ class DocumentModel(Base):
     upload_time = Column(DateTime, default=datetime.now, comment="上传时间")
     file_size = Column(String(50), comment="文件大小")
     status = Column(String(50), default="indexing", comment="处理状态: indexing(索引中), completed(已完成), failed(失败)")
-    user_id = Column(Integer, ForeignKey("users.id"), comment="用户ID")
+    user_id = Column(Integer, ForeignKey("users.id"), comment="上传用户ID")
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, comment="所属部门ID（索引时从上传者继承）")
     
     user = relationship("UserModel", backref="documents")
+    department = relationship("DepartmentModel", backref="documents")
 
 class ChatSessionModel(Base):
     __tablename__ = "chat_sessions"
@@ -146,8 +159,72 @@ except Exception as e:
     print(f"❌ [Error] 表结构初始化失败: {e}")
 
 # =========================================================
-# 5. 依赖函数
+# 4.1 数据库迁移：为现有表添加新字段（幂等）
 # =========================================================
+def _run_migrations():
+    """运行数据库迁移：为现有表添加新字段（重复执行安全）"""
+    migrations = [
+        ("users", "department_id", "ALTER TABLE users ADD COLUMN department_id INT NULL, ADD CONSTRAINT fk_users_dept FOREIGN KEY (department_id) REFERENCES departments(id)"),
+        ("documents", "department_id", "ALTER TABLE documents ADD COLUMN department_id INT NULL, ADD CONSTRAINT fk_documents_dept FOREIGN KEY (department_id) REFERENCES departments(id)"),
+    ]
+    try:
+        with engine.connect() as conn:
+            for table, column, alter_sql in migrations:
+                result = conn.execute(text(f"SHOW COLUMNS FROM `{table}` LIKE '{column}'"))
+                if not result.fetchone():
+                    conn.execute(text(alter_sql))
+                    conn.commit()
+                    print(f"✅ [Migration] {table} 表添加 {column} 列成功")
+    except Exception as e:
+        print(f"⚠️ [Migration] 迁移过程中出现警告（可忽略）: {e}")
+
+_run_migrations()
+
+# =========================================================
+# 4.2 预置固定部门数据（幂等）
+# =========================================================
+_PRESET_DEPARTMENTS = [
+    {"name": "技术研发部", "description": "负责系统架构、核心功能开发与技术攻关"},
+    {"name": "产品与需求部", "description": "负责产品规划、需求分析与原型设计"},
+    {"name": "运营与合规部", "description": "负责市场运营、合规审查与风险管控"},
+]
+
+def _seed_departments():
+    """确保预置部门存在（若不存在则插入，重复启动安全）"""
+    db = SessionLocal()
+    try:
+        inserted = 0
+        for dept_data in _PRESET_DEPARTMENTS:
+            exists = db.query(DepartmentModel).filter(DepartmentModel.name == dept_data["name"]).first()
+            if not exists:
+                db.add(DepartmentModel(name=dept_data["name"], description=dept_data["description"]))
+                inserted += 1
+        if inserted > 0:
+            db.commit()
+            print(f"✅ [Seed] 部门预置完成，新增 {inserted} 个：" + "、".join(d["name"] for d in _PRESET_DEPARTMENTS))
+        else:
+            print("✅ [Seed] 预置部门已存在，跳过")
+    except Exception as e:
+        print(f"⚠️ [Seed] 部门预置失败: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+_seed_departments()
+
+# =========================================================
+# 5. 工具函数
+# =========================================================
+def get_user_workspace(user) -> str:
+    """
+    获取用户对应的 RAG workspace 标识。
+    - 有部门：使用部门隔离 (dept_{dept_id})，同部门用户共享知识库
+    - 无部门：使用用户隔离 (user_{user_id})，仅能访问自己的知识库
+    """
+    if user.department_id:
+        return f"dept_{user.department_id}"
+    return f"user_{user.id}"
+
 def get_db():
     """
     FastAPI 依赖：获取数据库 session。

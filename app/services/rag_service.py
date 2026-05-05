@@ -1,7 +1,7 @@
 import time
 import json
 import os
-from app.rag.engine import get_rag_engine, get_user_engine, reset_global_stats, get_global_stats
+from app.rag.engine import get_rag_engine, get_user_engine, get_workspace_engine, reset_global_stats, get_global_stats
 from app.database import DocumentModel, SessionLocal
 from app.core import globals
 from app.utils.metrics import monitor
@@ -65,8 +65,8 @@ async def init_rag_engine():
         print(f"⚠️ [System] 存储层验证失败 (Qdrant 可能未启动): {e}")
     print("✅ [System] 环境就绪，引擎将按用户懒加载")
 
-async def process_doc_background(text_content: str, filename: str, user_id: int = None):
-    print(f"🔄 [Background] 开始处理文档: {filename}")
+async def process_doc_background(text_content: str, filename: str, user_id: int = None, workspace: str = None):
+    print(f"🔄 [Background] 开始处理文档: {filename} (workspace={workspace})")
     
     # 📊 创建性能指标收集器
     session_id = f"indexing_{filename}_{time.time()}"
@@ -91,9 +91,11 @@ async def process_doc_background(text_content: str, filename: str, user_id: int 
         doc.status = "indexing"
         db.commit()
 
-        # 获取用户专属引擎（如果传了 user_id），否则回退到全局引擎
+        # 获取 workspace 引擎（优先）或用户专属引擎，否则回退到全局引擎
         engine = None
-        if user_id is not None:
+        if workspace is not None:
+            engine = await get_workspace_engine(workspace)
+        elif user_id is not None:
             engine = await get_user_engine(user_id)
         elif globals.rag_engine:
             engine = globals.rag_engine

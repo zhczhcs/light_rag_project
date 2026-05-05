@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 
-from app.database import get_db, UserModel
+from app.database import get_db, UserModel, DepartmentModel
 from app.core.security import (
     verify_password,
     get_password_hash,
@@ -19,6 +19,7 @@ class UserRegister(BaseModel):
     username: str
     email: EmailStr
     password: str
+    department_id: int  # 必填，注册时选择所属部门
 
 class UserLogin(BaseModel):
     username: str
@@ -43,13 +44,19 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     if existing_email:
         raise HTTPException(status_code=400, detail="邮箱已被注册")
     
+    # 校验部门存在
+    dept = db.query(DepartmentModel).filter(DepartmentModel.id == user_data.department_id).first()
+    if not dept:
+        raise HTTPException(status_code=400, detail="所选部门不存在")
+
     hashed_password = get_password_hash(user_data.password)
     new_user = UserModel(
         username=user_data.username,
         email=user_data.email,
         hashed_password=hashed_password,
         role="user",
-        is_active=True
+        is_active=True,
+        department_id=user_data.department_id
     )
     db.add(new_user)
     db.commit()
@@ -82,7 +89,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             "id": user.id,
             "username": user.username,
             "email": user.email,
-            "role": user.role
+            "role": user.role,
+            "department_id": user.department_id
         }
     }
 
@@ -130,6 +138,8 @@ async def get_current_user_info(current_user: UserModel = Depends(get_current_us
         "email": current_user.email,
         "role": current_user.role,
         "is_active": current_user.is_active,
+        "department_id": current_user.department_id,
+        "department_name": current_user.department.name if current_user.department else None,
         "created_at": current_user.created_at
     }
 
@@ -145,6 +155,7 @@ async def debug_get_all_users(db: Session = Depends(get_db)):
                 "email": u.email,
                 "role": u.role,
                 "is_active": u.is_active,
+                "department_id": u.department_id,
                 "created_at": u.created_at
             }
             for u in users
@@ -216,3 +227,9 @@ async def test_security_functions():
             ) else "❌ Token 结构错误"
         }
     }
+
+@router.get("/departments", summary="获取部门列表（注册用，无需登录）")
+async def get_departments(db: Session = Depends(get_db)):
+    """返回所有可用部门列表，供注册页面下拉选择"""
+    departments = db.query(DepartmentModel).all()
+    return [{"id": d.id, "name": d.name} for d in departments]

@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from openai import AsyncOpenAI
 from sqlalchemy.orm import Session
 
-from app.rag.engine import QueryParam, get_user_engine, reset_global_stats, get_global_stats, set_need_references_flag
+from app.rag.engine import QueryParam, get_user_engine, get_workspace_engine, reset_global_stats, get_global_stats, set_need_references_flag
 from app.schemas.models import ChatRequest
 from app.services.file_service import build_snippet_around_query
 from app.services.context_service import build_conversation_history_enhanced
@@ -17,7 +17,7 @@ from app.core import globals
 from app.utils.metrics import monitor
 from app.utils.table_printer import print_kv_table
 from app.core.security import get_current_user
-from app.database import UserModel, get_db, ChatSessionModel, ChatMessageModel
+from app.database import UserModel, get_db, ChatSessionModel, ChatMessageModel, get_user_workspace
 
 
 # 临时日志过滤：只保留系统关键日志，其他 print 全部静音。
@@ -224,7 +224,7 @@ async def chat_with_rag(
     current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    user_engine = await get_user_engine(current_user.id)
+    user_engine = await get_workspace_engine(get_user_workspace(current_user))
 
     query_text = request.query
     if isinstance(query_text, list):
@@ -301,117 +301,11 @@ async def chat_with_rag(
         print("⏱️ " + _elapsed() + " 📝 [Context] 历史上下文构建完成, " + str(len(conversation_history)) + " 条消息")
 
         # =========================================================
-        # 🛠️ [亮点功能] LLM Agent 工具调用 (Function Calling) 拦截层
+        # 🛠️ LLM Agent 工具调用 (Function Calling) 拦截层 — 已禁用
         # =========================================================
         tool_call_result = None
         _agent_client = None
-        try:
-            from app.api.routers.weather_tool import simulate_get_weather, WEATHER_TOOL_SCHEMA
-            _agent_api_key = os.environ.get("ALI_API_KEY")
-            _agent_base_url = os.environ.get("ALI_BASE_URL")
-            if _agent_api_key and _agent_base_url:
-                _agent_client = AsyncOpenAI(api_key=_agent_api_key, base_url=_agent_base_url)
-                
-                # 让模型判断是否需要调用工具（仅传最后一句和简单的人设以极速响应）
-                _tools_messages = [
-                    {"role": "system", "content": "你是一个具有工具调用能力的智能网关。必须通过参数严格判断是否需要调用工具，无需调用则返回普通文本。"},
-                    {"role": "user", "content": query_text}
-                ]
-                
-                _agent_resp = await _agent_client.chat.completions.create(
-                    model=os.environ.get("TOOL_ROUTE_MODEL", "qwen3.5-27b"),
-                    messages=_tools_messages,
-                    tools=[WEATHER_TOOL_SCHEMA],
-                    tool_choice="auto",
-                    temperature=0.1
-                )
-                
-                _agent_msg = _agent_resp.choices[0].message
-                if _agent_msg.tool_calls:
-                    _tc = _agent_msg.tool_calls[0]
-                    if _tc.function.name == "get_weather":
-                        _args = json.loads(_tc.function.arguments)
-                        _loc = _args.get("location", "")
-                        print("⏱️ " + _elapsed() + f" 🛠️ [Agent] 触发工具调用: get_weather, 参数: {_loc}")
-                        
-                        # 真实执行函数
-                        _weather_data = simulate_get_weather(_loc)
-                        print("⏱️ " + _elapsed() + f" 🛠️ [Agent] 工具执行结果: {_weather_data}")
-                        
-                        tool_call_result = {
-                            "tool_messages": [
-                                _agent_msg,
-                                {"role": "tool", "tool_call_id": _tc.id, "content": _weather_data}
-                            ]
-                        }
-        except Exception as e:
-            print(f"⚠️ [Agent] 工具调用流检测出错: {e}")
-
-        # 如果命中了外部工具，则直接进入 Agent 独立流式作用域，完全绕过后续的 LightRAG 组件
-        if tool_call_result and _agent_client:
-            async def agent_event_generator():
-                print("⏱️ " + _elapsed() + " 📡 [Agent Stream] 开始生成基于工具结果的最终回答")
-                _tool_route = os.environ.get("TOOL_ROUTE_MODEL", "qwen3.5-27b")
-                yield json.dumps({"type": "meta", "data": {"model": _tool_route + " (Agent)", "mode": "tool_calling"}}, ensure_ascii=False) + "\n"
-                
-                _final_messages = [{"role": "system", "content": "你是一个懂礼貌的AI助手，请结合外部工具的结果自然、友好地回答用户。无需暴露工具细节，直接告诉用户结论即可。"}]
-                if conversation_history:
-                    # 适当携带近期几轮历史，防止聊到一半突然断代
-                    _final_messages.extend(conversation_history[-4:])
-                _final_messages.append({"role": "user", "content": query_text})
-                _final_messages.extend(tool_call_result["tool_messages"])
-                
-                full_ai_response = ""
-                actual_tokens = 0
-                try:
-                    _final_resp = await _agent_client.chat.completions.create(
-                        model=os.environ.get("TOOL_RESPONSE_MODEL", "qwen-turbo-latest"),
-                        messages=_final_messages,
-                        stream=True,
-                        stream_options={"include_usage": True},
-                        temperature=0.3
-                    )
-                    
-                    async for _chunk in _final_resp:
-                        if _chunk.choices and _chunk.choices[0].delta and _chunk.choices[0].delta.content:
-                            _content = _chunk.choices[0].delta.content
-                            full_ai_response += _content
-                            yield json.dumps({"type": "content", "data": _content}, ensure_ascii=False) + "\n"
-                        if hasattr(_chunk, "usage") and _chunk.usage and _chunk.usage.total_tokens:
-                            actual_tokens = _chunk.usage.total_tokens
-                            
-                    _tool_resp = os.environ.get("TOOL_RESPONSE_MODEL", "qwen-turbo-latest")
-                    yield json.dumps({"type": "done", "data": {"model": _tool_resp + " (Agent)", "tokens": actual_tokens}}, ensure_ascii=False) + "\n"
-                    
-                    # 结果写入数据库，并更新标题
-                    if request.session_id:
-                        ai_msg = ChatMessageModel(
-                            session_id=request.session_id,
-                            role="ai",
-                            content=full_ai_response,
-                            sources="[]",
-                            model_name=os.environ.get("TOOL_RESPONSE_MODEL", "qwen-turbo-latest") + " (Agent)",
-                            tokens=actual_tokens,
-                        )
-                        db.add(ai_msg)
-                        db.commit()
-                        db.refresh(ai_msg)
-                        yield json.dumps({"type": "message_id", "data": ai_msg.id}, ensure_ascii=False) + "\n"
-                        
-                        try:
-                            session_obj = db.query(ChatSessionModel).filter(ChatSessionModel.id == request.session_id).first()
-                            if session_obj and session_obj.title == "新对话":
-                                new_title = query_text[:15] + ("..." if len(query_text) > 15 else "")
-                                session_obj.title = new_title
-                                db.commit()
-                                yield json.dumps({"type": "session_title_update", "data": {"session_id": request.session_id, "title": new_title}}, ensure_ascii=False) + "\n"
-                        except Exception:
-                            pass
-                except Exception as e:
-                    print("❌ [Agent] 回答异常: " + str(e))
-                    yield json.dumps({"type": "error", "data": str(e)}, ensure_ascii=False) + "\n"
-
-            return StreamingResponse(agent_event_generator(), media_type="text/event-stream")
+        # 注：工具调用为实验性功能，当前已全局禁用
         # =========================================================
 
         retrieval_start_time = time.time()
@@ -429,11 +323,11 @@ async def chat_with_rag(
         param = QueryParam(
             mode=query_mode,
             stream=True,
-            chunk_top_k=6,
-            top_k=15,
-            max_entity_tokens=4500,
-            max_relation_tokens=6000,
-            max_total_tokens=22500,
+            chunk_top_k=int(os.environ.get("QUERY_CHUNK_TOP_K", "6")),
+            top_k=int(os.environ.get("QUERY_TOP_K", "10")),
+            max_entity_tokens=int(os.environ.get("QUERY_MAX_ENTITY_TOKENS", "2000")),
+            max_relation_tokens=int(os.environ.get("QUERY_MAX_RELATION_TOKENS", "3000")),
+            max_total_tokens=int(os.environ.get("QUERY_MAX_TOTAL_TOKENS", "15000")),
             conversation_history=conversation_history,
             user_prompt=_user_prompt,
         )
