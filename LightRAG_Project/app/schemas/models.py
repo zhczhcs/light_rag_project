@@ -11,6 +11,7 @@ class DocResponse(BaseModel):
 class ChatRequest(BaseModel):
     query: str
     mode: str = "hybrid"
+    session_id: int = None
 
 class Source(BaseModel):
     id: int

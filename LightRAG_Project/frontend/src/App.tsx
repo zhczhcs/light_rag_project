@@ -1,16 +1,159 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, Button, Input, message, Spin, List, Card, Table, Tag, Popconfirm, Select } from 'antd';
-import { UploadOutlined, SendOutlined, RobotOutlined, UserOutlined, ReadOutlined, DeleteOutlined, FileTextOutlined, CopyOutlined } from '@ant-design/icons';
+import { Upload, Button, Input, message, List, Card, Table, Tag, Popconfirm, Select, Tabs, Switch, ConfigProvider, theme } from 'antd';
+import { UploadOutlined, SendOutlined, RobotOutlined, UserOutlined, ReadOutlined, DeleteOutlined, FileTextOutlined, CopyOutlined, LogoutOutlined, MessageOutlined, PlusOutlined, StarOutlined, StarFilled, SettingOutlined, SunOutlined, MoonOutlined, MenuOutlined, MenuFoldOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './App.css';
+import Login from './pages/Login';
+import Admin from './pages/Admin';
 
 const { TextArea } = Input;
+
+// Axios 拦截器配置
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Token 刷新队列：防止多个 401 请求同时触发多次 refresh（共享单次刷新）
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function onTokenRefreshed(newToken: string) {
+  refreshSubscribers.forEach(cb => cb(newToken));
+  refreshSubscribers = [];
+}
+
+/**
+ * 解析 JWT payload（不验证签名），用于检查过期时间
+ */
+function parseJwtPayload(token: string): { exp?: number } | null {
+  try {
+    const base64 = token.split('.')[1];
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 确保返回一个有效的 access_token（给 fetch 等非 axios 调用使用）
+ * - 如果 token 未过期且距离过期 > 60s，直接返回
+ * - 如果 token 即将过期或已过期，先刷新再返回新 token
+ * - 刷新失败则抛出异常
+ */
+async function ensureValidToken(): Promise<string> {
+  const token = localStorage.getItem('access_token');
+  if (!token) throw new Error('未登录');
+
+  const payload = parseJwtPayload(token);
+  const now = Math.floor(Date.now() / 1000);
+
+  // 距离过期 > 60s，直接用
+  if (payload?.exp && payload.exp - now > 60) {
+    return token;
+  }
+
+  // token 即将过期或已过期 → 刷新
+  // 复用全局 refreshSubscribers 队列，避免和 axios 拦截器冲突
+  if (isRefreshing) {
+    return new Promise<string>((resolve, reject) => {
+      refreshSubscribers.push((newToken: string) => {
+        newToken ? resolve(newToken) : reject(new Error('刷新失败'));
+      });
+    });
+  }
+
+  isRefreshing = true;
+  try {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) throw new Error('No refresh token');
+
+    const res = await axios.post('http://localhost:8000/api/auth/refresh', {
+      refresh_token: refreshToken
+    });
+
+    localStorage.setItem('access_token', res.data.access_token);
+    localStorage.setItem('refresh_token', res.data.refresh_token);
+    isRefreshing = false;
+    onTokenRefreshed(res.data.access_token);
+    return res.data.access_token;
+  } catch (err) {
+    isRefreshing = false;
+    refreshSubscribers = [];
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    window.location.reload();
+    throw err;
+  }
+}
+
+axios.interceptors.response.use(
+  response => response,
+  async error => {
+    const originalRequest = error.config;
+
+    // === 500 容错：后端可能正在自愈（SSH 隧道重连），等 2s 重试一次 ===
+    if (error.response?.status === 500 && !originalRequest._serverRetry) {
+      originalRequest._serverRetry = true;
+      console.log('[Axios] 500 错误，等待 2s 后重试（后端可能正在自愈）...');
+      await new Promise(r => setTimeout(r, 2000));
+      return axios(originalRequest);
+    }
+
+    // === 401 Token 刷新（共享单次刷新） ===
+    // 跳过登录/注册接口的 401，让 Login 组件自己处理错误提示
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register');
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+      // 如果已经在刷新中，排队等待
+      if (isRefreshing) {
+        return new Promise(resolve => {
+          refreshSubscribers.push((newToken: string) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            resolve(axios(originalRequest));
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) throw new Error('No refresh token');
+        
+        const res = await axios.post('http://localhost:8000/api/auth/refresh', {
+          refresh_token: refreshToken
+        });
+        
+        localStorage.setItem('access_token', res.data.access_token);
+        localStorage.setItem('refresh_token', res.data.refresh_token);
+        
+        isRefreshing = false;
+        onTokenRefreshed(res.data.access_token);
+        
+        originalRequest.headers.Authorization = `Bearer ${res.data.access_token}`;
+        return axios(originalRequest);
+      } catch (refreshError) {
+        isRefreshing = false;
+        refreshSubscribers = [];
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.reload();
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // 定义接口
 interface SourceItem {
   id: number;
+  reference_id: number;
   content: string;
   content_full: string;
   highlight_terms: string[];
@@ -19,11 +162,15 @@ interface SourceItem {
 }
 
 interface Message {
+  id?: number;
   role: 'user' | 'ai';
   content: string;
   sources?: SourceItem[];
   time?: string;
   isThinking?: boolean; // 新增：是否正在思考标记
+  is_favorited?: boolean;
+  model?: string;   // 新增：使用的模型名
+  tokens?: number;  // 新增：本次对话消耗的 Token 数（来自 API usage 字段）
 }
 
 interface DocItem {
@@ -34,9 +181,26 @@ interface DocItem {
   status: string;
 }
 
+interface SessionItem {
+  id: number;
+  title: string;
+  created_at: string;
+  message_count: number;
+}
+
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('access_token'));
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'main' | 'admin'>('main');
+  const [darkMode, setDarkMode] = useState<boolean>(localStorage.getItem('theme') === 'dark');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+
+  const handleThemeToggle = (checked: boolean) => {
+    setDarkMode(checked);
+    localStorage.setItem('theme', checked ? 'dark' : 'light');
+  };
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', content: '你好！我是你的 LightRAG 智能助手。', time: new Date().toLocaleTimeString() }
+    { role: 'ai', content: '您好！有什么能帮您的吗？我可以帮您查找知识库中的文档、解答问题、分析资料。', time: new Date().toLocaleTimeString() }
   ]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,21 +212,120 @@ const App: React.FC = () => {
   const [filterText, setFilterText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+  const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({});
+
+  // 新增：对话历史状态
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+  const [favorites, setFavorites] = useState<any[]>([]);
 
   // 新增：用于自动滚动的 Ref
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 初始化加载文档列表
   useEffect(() => {
-    fetchDocuments();
-  }, []);
+    if (isAuthenticated) {
+      fetchCurrentUser();
+      fetchDocuments();
+      fetchSessions();
+      fetchFavorites();
+    }
+  }, [isAuthenticated]);
 
-  // 新增：监听消息变化，自动滚动到底部
+  // 全局定时轮询：只要有 indexing/parsing 文档就每 5 秒自动刷新一次，不受上传超时限制
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const hasIndexing = documents.some(doc => doc.status === 'indexing' || doc.status === 'parsing');
+    if (!hasIndexing) return;
+    const timer = setInterval(() => {
+      fetchDocuments();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [documents, isAuthenticated]);
+
+  useEffect(() => {
+    if (viewMode === 'admin' && currentUser?.username !== 'zmq') {
+      setViewMode('main');
+    }
+  }, [viewMode, currentUser]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get('http://localhost:8000/api/auth/me');
+      setCurrentUser(res.data);
+    } catch (error) {
+      setCurrentUser(null);
+    }
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      const res = await axios.get('http://localhost:8000/api/chat-history/favorites');
+      setFavorites(res.data);
+    } catch (error) {
+      console.error("获取收藏列表失败", error);
+    }
+  };
+
+  const fetchSessions = async () => {
+    try {
+      const res = await axios.get('http://localhost:8000/api/chat-history/sessions');
+      setSessions(res.data);
+      if (res.data.length > 0 && !currentSessionId) {
+        handleSwitchSession(res.data[0].id);
+      } else if (res.data.length === 0) {
+        handleNewChat();
+      }
+    } catch (error) {
+      console.error("获取对话列表失败", error);
+    }
+  };
+
+  const handleNewChat = async () => {
+    try {
+      const res = await axios.post('http://localhost:8000/api/chat-history/sessions/new');
+      setCurrentSessionId(res.data.session_id);
+      setMessages([{ role: 'ai', content: '您好！有什么能帮您的吗？我可以帮您查找知识库中的文档、解答问题、分析资料。', time: new Date().toLocaleTimeString() }]);
+      fetchSessions();
+    } catch (error) {
+      message.error('创建新对话失败');
+    }
+  };
+
+  const handleSwitchSession = async (sessionId: number) => {
+    try {
+      const res = await axios.get(`http://localhost:8000/api/chat-history/sessions/${sessionId}/messages`);
+      if (res.data.length === 0) {
+        setMessages([{ role: 'ai', content: '您好！有什么能帮您的吗？我可以帮您查找知识库中的文档、解答问题、分析资料。', time: new Date().toLocaleTimeString() }]);
+      } else {
+        setMessages(res.data);
+      }
+      setCurrentSessionId(sessionId);
+    } catch (error) {
+      message.error('切换对话失败');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setViewMode('main');
+    setMessages([{ role: 'ai', content: '您好！有什么能帮您的吗？我可以帮您查找知识库中的文档、解答问题、分析资料。', time: new Date().toLocaleTimeString() }]);
+    setDocuments([]);
+  };
+
+  // 监听消息变化，自动滚动到底部（必须在条件 return 之前，遵守 React Hooks 规则）
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, loading]); // 监听消息列表和 loading 状态
+  }, [messages, loading]);
+
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
 
   const fetchDocuments = async () => {
     setLoadingDocs(true);
@@ -86,9 +349,10 @@ const App: React.FC = () => {
       // 1. 上传文件，触发后台任务
       const res = await axios.post('http://localhost:8000/api/upload', formData);
       const filename = res.data.filename;
+      const docId = res.data.doc_id;  // 后端返回的文档 ID，用于精确轮询
       message.info('上传成功，正在后台建立索引...'); // 提示用户等待
       
-      // 2. 轮询检查状态
+      // 2. 轮询检查状态（用 doc_id 精确匹配，避免重名文件误判）
       let isFinished = false;
       let attempts = 0;
       const maxAttempts = 60; // 轮询上限，防止死循环 (约2分钟)
@@ -102,8 +366,10 @@ const App: React.FC = () => {
         const docs = docsRes.data;
         setDocuments(docs); 
 
-        // 找到当前上传的文档
-        const targetDoc = docs.find((d: any) => d.filename === filename);
+        // 用 doc_id 精确查找当前上传的文档（比 filename 更可靠）
+        const targetDoc = docId 
+          ? docs.find((d: any) => d.id === docId)
+          : docs.find((d: any) => d.filename === filename);  // fallback: 旧接口兼容
         if (targetDoc) {
            if (targetDoc.status === 'completed') {
                isFinished = true;
@@ -121,9 +387,11 @@ const App: React.FC = () => {
           message.warning('索引仍在处理中，请稍后查看列表状态');
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      message.error('上传请求失败');
+      // 后端返回 4xx 时，展示具体原因（如格式不支持、空文件）
+      const detail = error?.response?.data?.detail;
+      message.error(detail || '上传请求失败');
     } finally {
       setUploading(false); // 无论成功失败，最后都停止 loading 动画
     }
@@ -153,6 +421,19 @@ const App: React.FC = () => {
     if (!inputText.trim()) return;
     const userMsg = inputText;
     
+    let activeSessionId = currentSessionId;
+    if (!activeSessionId) {
+      try {
+        const res = await axios.post('http://localhost:8000/api/chat-history/sessions/new');
+        activeSessionId = res.data.session_id;
+        setCurrentSessionId(activeSessionId);
+        fetchSessions();
+      } catch (error) {
+        message.error('创建新对话失败');
+        return;
+      }
+    }
+
     // 1. 先把用户消息显示出来
     setMessages(prev => [...prev, { role: 'user', content: userMsg, time: new Date().toLocaleTimeString() }]);
     setInputText('');
@@ -168,14 +449,26 @@ const App: React.FC = () => {
     }]);
 
     try {
-      // 3. 使用 fetch 发起流式请求
-      const response = await fetch('http://localhost:8000/api/chat', {
+      // 3. 使用 fetch 发起流式请求（先确保 token 有效，过期则自动刷新）
+      let validToken = await ensureValidToken();
+
+      const doFetch = (tk: string) => fetch('http://localhost:8000/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tk}`
         },
-        body: JSON.stringify({ query: userMsg, mode: "hybrid" }),
+        body: JSON.stringify({ query: userMsg, mode: "mix", session_id: activeSessionId }),
       });
+
+      let response = await doFetch(validToken);
+
+      // 如果仍然 401（极端时序竞争），再刷新一次重试
+      if (response.status === 401) {
+        console.log('[Chat] fetch 收到 401，尝试刷新 token 后重试...');
+        validToken = await ensureValidToken();
+        response = await doFetch(validToken);
+      }
 
       if (!response.ok) {
         throw new Error('网络请求失败');
@@ -260,6 +553,53 @@ const App: React.FC = () => {
                   }
                   return newMsgs;
                });
+            } else if (part.type === 'content_correction') {
+               // 🔧 引用编号校正：后端过滤引用后重编号，替换 LLM 正文中的旧编号
+               const correctedContent = part.data;
+               setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const lastIdx = newMsgs.length - 1;
+                  const lastMsg = newMsgs[lastIdx];
+                  if (lastMsg && lastMsg.role === 'ai') {
+                    newMsgs[lastIdx] = {
+                      ...lastMsg,
+                      content: correctedContent,
+                      isThinking: false
+                    };
+                  }
+                  return newMsgs;
+               });
+            } else if (part.type === 'message_id') {
+               // 收到消息 ID
+               const msgId = part.data;
+               setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const lastIdx = newMsgs.length - 1;
+                  const lastMsg = newMsgs[lastIdx];
+                  if (lastMsg && lastMsg.role === 'ai') {
+                    newMsgs[lastIdx] = {
+                      ...lastMsg,
+                      id: msgId
+                    };
+                  }
+                  return newMsgs;
+               });
+            } else if (part.type === 'session_title_update') {
+               // 🏷️ 第一次对话后自动更新侧边栏会话标题
+               const { session_id: sid, title: newTitle } = part.data;
+               setSessions(prev => prev.map(s => s.id === sid ? { ...s, title: newTitle } : s));
+            } else if (part.type === 'done') {
+               // 收到完成元信息（模型名 + 本次消耗 Token 数）
+               const { model, tokens } = part.data;
+               setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const lastIdx = newMsgs.length - 1;
+                  const lastMsg = newMsgs[lastIdx];
+                  if (lastMsg && lastMsg.role === 'ai') {
+                    newMsgs[lastIdx] = { ...lastMsg, model, tokens };
+                  }
+                  return newMsgs;
+               });
             } else if (part.type === 'error') {
                console.error("Backend Stream Error:", part.data);
             }
@@ -268,6 +608,9 @@ const App: React.FC = () => {
           }
         }
       }
+      
+      // 刷新对话列表以更新消息数量
+      fetchSessions();
 
     } catch (error) {
        console.error(error);
@@ -291,6 +634,26 @@ const App: React.FC = () => {
       message.success('已复制到剪贴板');
     } catch (error) {
       message.error('复制失败');
+    }
+  };
+
+  const handleFavorite = async (messageId: number, isFavorited: boolean) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.post(`http://localhost:8000/api/chat-history/messages/${messageId}/favorite`, {
+        is_favorited: isFavorited
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId ? { ...msg, is_favorited: isFavorited } : msg
+      ));
+      
+      message.success(isFavorited ? '已收藏' : '已取消收藏');
+      fetchFavorites();
+    } catch (error) {
+      message.error('操作失败');
     }
   };
 
@@ -330,131 +693,241 @@ const App: React.FC = () => {
       title: '文件名',
       dataIndex: 'filename',
       key: 'filename',
-      render: (text: string) => <span><FileTextOutlined /> {text}</span>,
-    },
-    {
-      title: '大小',
-      dataIndex: 'file_size',
-      key: 'file_size',
-      width: 80,
+      width: 150,
+      ellipsis: true,
+      render: (text: string) => (
+        <span style={{ wordBreak: 'break-all', whiteSpace: 'normal', fontSize: 12 }}>
+          <FileTextOutlined /> {text}
+        </span>
+      ),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 65,
       render: (status: string) => {
-        let color = 'default';
         let text = status || '未知';
-        if (status === 'completed') { color = 'success'; text = '已完成'; }
-        else if (status === 'indexing' || status === 'parsing') { color = 'processing'; text = '索引中'; }
-        else if (status === 'failed') { color = 'error'; text = '失败'; }
-        return <Tag color={color}>{text}</Tag>;
+        if (status === 'completed') { text = '已完成'; }
+        else if (status === 'indexing' || status === 'parsing') { text = '索引中'; }
+        else if (status === 'failed') { text = '失败'; }
+        return <span style={{ fontSize: 12, color: '#1a1a1a' }}>{text}</span>;
       },
     },
     {
       title: '操作',
       key: 'action',
-      width: 60,
+      width: 48,
+      align: 'right' as const,
       render: (_: any, record: DocItem) => (
-        <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(record.id)}>
-           <Button type="text" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
+        <div style={{ textAlign: 'right' }}>
+          <Popconfirm title="确定删除吗？" onConfirm={() => handleDelete(record.id)}>
+            <Button type="text" size="small" icon={<DeleteOutlined style={{ color: '#ef4444', fontSize: 14 }} />} style={{ color: '#1a1a1a', padding: '0 4px' }} />
+          </Popconfirm>
+        </div>
       ),
     },
   ];
 
+  const isAdmin = currentUser?.username === 'zmq';
+
   return (
-    <div className="app-root">
-      <div className="app-header">
-        <h2 className="app-title">LightRAG 知识库系统</h2>
+    <ConfigProvider theme={{ algorithm: darkMode ? theme.darkAlgorithm : theme.defaultAlgorithm }}>
+    <div className="app-root" data-theme={darkMode ? 'dark' : 'light'}>
+      <div className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {sidebarCollapsed && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setSidebarCollapsed(false)}
+              style={{ fontSize: 18 }}
+            />
+          )}
+          <h2 className="app-title" style={{ margin: 0 }}>Agentic RAG</h2>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Switch
+            checked={darkMode}
+            onChange={handleThemeToggle}
+            checkedChildren={<MoonOutlined />}
+            unCheckedChildren={<SunOutlined />}
+          />
+          {isAdmin && (
+            <Button type="text" icon={<SettingOutlined />} onClick={() => setViewMode('admin')}>
+              管理后台
+            </Button>
+          )}
+          <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout}>
+            退出登录
+          </Button>
+        </div>
       </div>
 
-      <div className="app-content">
+      <div className="app-content" style={viewMode === 'admin' ? { overflow: 'hidden', display: 'flex' } : undefined}>
+        {viewMode === 'admin' ? (
+          <Admin onBack={() => setViewMode('main')} />
+        ) : (
+        <>
         {/* 左侧：加宽一点，用来放表格 */}
-        <div className="sidebar">
-          <div className="sidebar-title-row">
-            <h3 className="sidebar-title"><ReadOutlined /> 知识库管理</h3>
-            {isIndexing && <span className="indexing-pill">索引中</span>}
-          </div>
-
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-label">文档总数</div>
-              <div className="stat-value">{docTotal}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">已完成</div>
-              <div className="stat-value stat-value--success">{docCompleted}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">索引中</div>
-              <div className="stat-value stat-value--info">{docIndexing}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">失败</div>
-              <div className="stat-value stat-value--danger">{docFailed}</div>
-            </div>
-          </div>
-
-          <div className="filter-row">
-            <Input
-              allowClear
-              placeholder="搜索文件名"
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-            />
-            <Select
-              value={statusFilter}
-              onChange={(value) => setStatusFilter(value)}
-              options={[
-                { value: 'all', label: '全部状态' },
-                { value: 'completed', label: '已完成' },
-                { value: 'indexing', label: '索引中' },
-                { value: 'failed', label: '失败' }
-              ]}
-            />
-          </div>
-          
-          <Upload customRequest={handleUpload} showUploadList={false} accept=".pdf,.txt,.md,.docx,.doc">
-            <Button type="primary" icon={<UploadOutlined />} loading={uploading} block className="upload-btn">
-              {uploading ? '正在建立索引...' : '上传文档'}
-            </Button>
-          </Upload>
-
-          <Popconfirm 
-            title="确定要删除所有文档吗？" 
-            description="此操作将清空所有文档和向量数据，不可恢复！"
-            onConfirm={handleDeleteAll}
-            okText="确定删除"
-            cancelText="取消"
-            okButtonProps={{ danger: true }}
-          >
-            <Button 
-              danger 
-              icon={<DeleteOutlined />} 
-              block 
-              className="delete-all-btn"
-              disabled={documents.length === 0}
-            >
-              删除所有文档
-            </Button>
-          </Popconfirm>
-
-          {/* 文档列表表格 */}
-          <div className="table-wrapper">
-            <Table 
-              dataSource={filteredDocuments} 
-              columns={columns} 
-              rowKey="id" 
-              pagination={false} 
+        <div className={`sidebar ${sidebarCollapsed ? 'sidebar--collapsed' : ''}`}>
+          <div className="sidebar-toolbar">
+            <Button
+              type="text"
               size="small"
-              loading={loadingDocs}
-              sticky
-              scroll={{ y: 420 }}
-              locale={{ emptyText: '暂无文档' }}
+              icon={<MenuFoldOutlined />}
+              onClick={() => setSidebarCollapsed(true)}
             />
           </div>
+          <Tabs defaultActiveKey="1" centered>
+            <Tabs.TabPane tab={<span><MessageOutlined /> 对话历史</span>} key="1">
+              <div style={{ padding: '0 12px' }}>
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  block
+                  onClick={handleNewChat}
+                  style={{ marginBottom: 12 }}
+                >
+                  新建对话
+                </Button>
+                <div className="session-divider" />
+                <List
+                  dataSource={sessions}
+                  renderItem={item => (
+                    <List.Item
+                      className={`session-item ${currentSessionId === item.id ? 'active' : ''}`}
+                      onClick={() => handleSwitchSession(item.id)}
+                    >
+                      <List.Item.Meta
+                        title={<span className="session-title">{item.title}</span>}
+                        description={<span className="session-desc">{item.created_at} · {item.message_count} 条消息</span>}
+                      />
+                    </List.Item>
+                  )}
+                />
+              </div>
+            </Tabs.TabPane>
+            <Tabs.TabPane tab={<span><StarOutlined /> 收藏夹</span>} key="2">
+              <div style={{ padding: '0 12px' }}>
+                <List
+                  dataSource={favorites}
+                  renderItem={item => (
+                    <List.Item
+                      className="favorite-item"
+                    >
+                      <div className="favorite-date">{item.created_at}</div>
+                      <div className="favorite-content">
+                        {item.content}
+                      </div>
+                      <div className="favorite-actions">
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<StarFilled style={{ color: '#fadb14' }} />}
+                          onClick={() => handleFavorite(item.id, false)}
+                        >
+                          取消收藏
+                        </Button>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              </div>
+            </Tabs.TabPane>
+            <Tabs.TabPane tab={<span><ReadOutlined /> 知识库管理</span>} key="3">
+              <div style={{ padding: '0 12px' }}>
+                <div className="sidebar-title-row">
+                  <h3 className="sidebar-title"><ReadOutlined /> 知识库管理</h3>
+                  {isIndexing && <span className="indexing-pill">索引中</span>}
+                </div>
+
+                <div className="stats-grid">
+                  <div className="stat-card">
+                    <div className="stat-label">文档总数</div>
+                    <div className="stat-value">{docTotal}</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">已完成</div>
+                    <div className="stat-value">{docCompleted}</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">索引中</div>
+                    <div className="stat-value">{docIndexing}</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">失败</div>
+                    <div className="stat-value">{docFailed}</div>
+                  </div>
+                </div>
+
+                {currentUser?.department_name && (
+                  <div style={{ marginBottom: 12, padding: '4px 12px', background: '#f4f4f4', borderRadius: 6, fontSize: 12, color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>当前部门：<strong>{currentUser.department_name}</strong></span>
+                  </div>
+                )}
+
+                <div className="filter-row">
+                  <Input
+                    allowClear
+                    placeholder="搜索文件名"
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                  />
+                  <Select
+                    value={statusFilter}
+                    onChange={(value) => setStatusFilter(value)}
+                    options={[
+                      { value: 'all', label: '全部状态' },
+                      { value: 'completed', label: '已完成' },
+                      { value: 'indexing', label: '索引中' },
+                      { value: 'failed', label: '失败' }
+                    ]}
+                  />
+                </div>
+                
+                <Upload customRequest={handleUpload} showUploadList={false} accept=".pdf,.txt,.md,.docx">
+                  <Button type="primary" icon={<UploadOutlined />} loading={uploading} block className="upload-btn">
+                    {uploading ? '正在建立索引...' : '上传文档'}
+                  </Button>
+                </Upload>
+
+                <Popconfirm
+                  title="确定要删除所有文档吗？"
+                  description="此操作将清空所有文档和向量数据，不可恢复！"
+                  onConfirm={handleDeleteAll}
+                  okText="确定删除"
+                  cancelText="取消"
+                >
+                  <Button
+                    icon={<DeleteOutlined style={{ color: '#ef4444' }} />}
+                    block
+                    className="delete-all-btn"
+                    disabled={documents.length === 0}
+                    style={{ borderColor: '#e5e5e5', color: '#1a1a1a' }}
+                  >
+                    删除所有文档
+                  </Button>
+                </Popconfirm>
+
+                {/* 文档列表表格 */}
+                <div className="table-wrapper">
+                  <Table 
+                    dataSource={filteredDocuments} 
+                    columns={columns} 
+                    rowKey="id" 
+                    pagination={false} 
+                    size="small"
+                    loading={loadingDocs}
+                    sticky
+                    scroll={{ y: 420 }}
+                    locale={{ emptyText: '暂无文档' }}
+                  />
+                </div>
+              </div>
+            </Tabs.TabPane>
+          </Tabs>
         </div>
 
         {/* 右侧：聊天 */}
@@ -496,34 +969,100 @@ const App: React.FC = () => {
                         >
                           复制
                         </Button>
+                        {item.id && (
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={item.is_favorited ? <StarFilled style={{ color: '#fadb14' }} /> : <StarOutlined />}
+                            onClick={() => handleFavorite(item.id!, !item.is_favorited)}
+                          >
+                            {item.is_favorited ? '已收藏' : '收藏'}
+                          </Button>
+                        )}
+                        {item.model && (
+                          <span style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.45, userSelect: 'none' }}>
+                            {item.model}{item.tokens ? ` · ${item.tokens} tokens` : ''}
+                          </span>
+                        )}
                       </div>
                     )}
                     {item.role === 'ai' && item.sources && item.sources.length > 0 && (() => {
-                      const displaySources = item.sources;
+                      // 按 reference_id（文件）聚合 chunks
+                      const fileGroups = new Map<number, { source_filename: string; chunks: SourceItem[] }>();
+                      for (const src of item.sources) {
+                        const refId = src.reference_id || src.id || 0;
+                        if (!fileGroups.has(refId)) {
+                          fileGroups.set(refId, { source_filename: src.source_filename, chunks: [] });
+                        }
+                        fileGroups.get(refId)!.chunks.push(src);
+                      }
+                      const groups = Array.from(fileGroups.entries()).map(([refId, group]) => ({
+                        refId,
+                        ...group,
+                      }));
+                      // 对每个文件组内的 chunks 按 score 降序排序
+                      for (const g of groups) {
+                        g.chunks.sort((a, b) => {
+                          const sa = a.score ?? -1;
+                          const sb = b.score ?? -1;
+                          return sb - sa;
+                        });
+                      }
+                      const totalChunks = item.sources.length;
                       return (
                         <div className="sources">
-                          <div className="sources-title">📚 引用来源：</div>
-                          {displaySources.map((src) => {
-                            const key = `${item.time || ''}-${src.id}`;
-                            const isExpanded = !!expandedSources[key];
-                            const displayText = isExpanded ? src.content_full : src.content;
+                          <div className="sources-title">引用来源（共{groups.length}个文档，{totalChunks}个片段）：</div>
+                          {groups.map((group, fileIdx) => {
+                            const fileKey = `${item.time || ''}-file-${group.refId}`;
+                            const isFileExpanded = !!expandedFiles[fileKey];
                             return (
-                              <div key={src.id} className="sources-item">
-                                <div className="sources-item-title">
-                                  【来源文档：{src.source_filename}】
+                              <div key={fileKey} className="sources-file-group">
+                                <div
+                                  className="sources-file-header"
+                                  onClick={() => setExpandedFiles(prev => ({ ...prev, [fileKey]: !isFileExpanded }))}
+                                >
+                                  <div className="sources-file-header-left">
+                                    <span className="sources-file-name">文件[{fileIdx + 1}]：{group.source_filename}</span>
+                                    <span className="sources-file-count">（共{group.chunks.length}个片段）</span>
+                                  </div>
+                                  <span className={`sources-file-arrow ${isFileExpanded ? 'expanded' : ''}`}>▶</span>
                                 </div>
-                                <div className="sources-item-content">
-                                  [{src.id}] {renderHighlightedText(displayText, src.highlight_terms || [])}
-                                </div>
-                                {src.content_full && src.content_full !== src.content && (
-                                  <Button
-                                    type="link"
-                                    size="small"
-                                    onClick={() => setExpandedSources(prev => ({ ...prev, [key]: !isExpanded }))}
-                                    className="sources-toggle"
-                                  >
-                                    {isExpanded ? '收起' : '展开'}
-                                  </Button>
+                                {isFileExpanded && (
+                                  <div className="sources-file-body">
+                                    {group.chunks.map((src, chunkIdx) => {
+                                      const chunkKey = `${fileKey}-chunk-${chunkIdx}`;
+                                      const isChunkExpanded = !!expandedSources[chunkKey];
+                                      const displayText = src.content_full || src.content;
+                                      return (
+                                        <div key={chunkKey} className="sources-item">
+                                          <div
+                                            className="sources-item-header"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setExpandedSources(prev => ({ ...prev, [chunkKey]: !isChunkExpanded }));
+                                            }}
+                                          >
+                                            <div className="sources-item-header-left">
+                                              <span className="sources-item-number">片段{chunkIdx + 1}</span>
+                                            </div>
+                                            <div className="sources-item-header-right">
+                                              {src.score !== undefined && src.score !== null && (
+                                                <span className="sources-item-score">相关度: {src.score.toFixed(3)}</span>
+                                              )}
+                                              <span className={`sources-item-arrow ${isChunkExpanded ? 'expanded' : ''}`}>▶</span>
+                                            </div>
+                                          </div>
+                                          {isChunkExpanded && (
+                                            <div className="sources-item-body">
+                                              <div className="sources-item-content">
+                                                {renderHighlightedText(displayText, src.highlight_terms || [])}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
                                 )}
                               </div>
                             );
@@ -560,8 +1099,11 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
+    </ConfigProvider>
   );
 };
 

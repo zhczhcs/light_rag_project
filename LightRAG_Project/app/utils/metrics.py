@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from collections import defaultdict
+from app.utils.table_printer import print_kv_table, print_simple_table
 
 
 @dataclass
@@ -28,6 +29,7 @@ class MetricsCollector:
     total_chunks: int = 0
     retrieved_chunks: int = 0
     total_tokens_estimated: int = 0
+    last_response_tokens: int = 0   # 最近一次 LLM 调用的实际 Token 数（来自 API usage 字段）
     
     # 详细记录
     details: Dict[str, Any] = field(default_factory=dict)
@@ -44,6 +46,7 @@ class MetricsCollector:
         self.total_chunks = 0
         self.retrieved_chunks = 0
         self.total_tokens_estimated = 0
+        self.last_response_tokens = 0
         self.details = {}
     
     def add_embedding_call(self, duration: float, texts_count: int):
@@ -59,56 +62,79 @@ class MetricsCollector:
         self.total_tokens_estimated += estimated_tokens
     
     def print_indexing_report(self, filename: str):
-        """打印索引阶段性能报告"""
-        print("\n" + "="*80)
-        print(f"📊 【索引性能报告】文件: {filename}")
-        print("="*80)
-        print(f"⏱️  总耗时: {self.total_time:.2f} 秒")
-        print(f"📦 分片数量: {self.total_chunks} 个")
-        print(f"🔢 Embedding 调用: {self.embedding_calls} 次 (耗时: {self.embedding_time:.2f}s)")
-        print(f"🤖 LLM 调用 (实体提取): {self.llm_calls} 次 (耗时: {self.llm_time:.2f}s)")
-        print(f"💰 预估 Token 消耗: ~{self.total_tokens_estimated:,} tokens")
-        
-        if self.total_chunks > 0:
-            print(f"📈 平均每分片耗时: {self.total_time / self.total_chunks:.2f} 秒")
-            print(f"   └─ Embedding: {self.embedding_time / self.embedding_calls:.3f}s/次" if self.embedding_calls > 0 else "")
-            print(f"   └─ LLM 提取: {self.llm_time / self.llm_calls:.3f}s/次" if self.llm_calls > 0 else "")
-        
+        """打印索引阶段性能报告（表格版）"""
+        print_kv_table(
+            f"📊 索引性能报告 — {filename}",
+            {
+                "总耗时": f"{self.total_time:.2f} s",
+                "分片数量": f"{self.total_chunks} 个",
+                "Embedding 调用": f"{self.embedding_calls} 次 / {self.embedding_time:.2f}s",
+                "LLM 调用 (实体提取)": f"{self.llm_calls} 次 / {self.llm_time:.2f}s",
+                "预估 Token 消耗": f"~{self.total_tokens_estimated:,} tokens",
+            },
+            prefix_newline=True,
+        )
+        if self.total_chunks > 0 and self.embedding_calls > 0:
+            print_simple_table(
+                "📈 平均耗时明细",
+                ["阶段", "每次耗时"],
+                [
+                    ["Embedding", f"{self.embedding_time / self.embedding_calls:.3f}s"],
+                    ["LLM 提取", f"{self.llm_time / self.llm_calls:.3f}s"],
+                ],
+                col_widths=[18, 18],
+                prefix_newline=True,
+            )
         if self.details:
-            print(f"\n📝 详细信息:")
-            for key, value in self.details.items():
-                print(f"   • {key}: {value}")
-        
-        print("="*80 + "\n")
-    
+            detail_rows = [[str(k), str(v)] for k, v in self.details.items()]
+            print_simple_table(
+                "📝 详细信息", ["字段", "值"], detail_rows, col_widths=[22, 38],
+                prefix_newline=True,
+            )
+
     def print_query_report(self, query: str, model_name: str):
-        """打印问答阶段性能报告"""
-        print("\n" + "="*80)
-        print(f"💬 【问答性能报告】")
-        print("="*80)
-        print(f"❓ 问题: {query[:50]}{'...' if len(query) > 50 else ''}")
-        print(f"🤖 使用模型: {model_name}")
-        print(f"⏱️  总耗时: {self.total_time:.2f} 秒")
-        print(f"   ├─ 检索阶段: {self.retrieval_time:.2f}s")
-        print(f"   └─ 生成阶段: {self.generation_time:.2f}s")
-        
-        print(f"\n🔍 检索统计:")
-        print(f"   • 召回文档块: {self.retrieved_chunks} 个")
+        """打印问答阶段性能报告（表格版）"""
+        # 1. 基础信息
+        print_kv_table(
+            "💬 问答性能报告",
+            {
+                "问题": query[:60] + ("..." if len(query) > 60 else ""),
+                "使用模型": model_name,
+                "总耗时": f"{self.total_time:.2f} s",
+                "检索阶段": f"{self.retrieval_time:.2f} s",
+                "生成阶段": f"{self.generation_time:.2f} s",
+            },
+            key_width=18, val_width=52,
+        )
+
+        # 2. 检索统计
+        retrieval_data = {"召回文档块": f"{self.retrieved_chunks} 个"}
         if self.details.get('retrieval_sources'):
-            print(f"   • 来源文件: {', '.join(set(self.details['retrieval_sources']))}")
+            src = ", ".join(set(self.details['retrieval_sources']))
+            retrieval_data["来源文件"] = src[:50] + ("..." if len(src) > 50 else "")
         if self.retrieved_chunks > 0:
-            print(f"   • 平均相似度: {self.details.get('avg_similarity', 'N/A')}")
-        
-        print(f"\n🔢 API 调用统计:")
-        print(f"   • Embedding 调用: {self.embedding_calls} 次 (耗时: {self.embedding_time:.2f}s)")
-        print(f"   • LLM 调用: {self.llm_calls} 次 (耗时: {self.llm_time:.2f}s)")
-        print(f"   • 预估 Token 消耗: ~{self.total_tokens_estimated:,} tokens")
-        
+            retrieval_data["平均相似度"] = str(self.details.get('avg_similarity', 'N/A'))
+        print_kv_table("🔍 检索统计", retrieval_data, key_width=18, val_width=52)
+
+        # 3. API 调用统计
+        print_simple_table(
+            "🔢 API 调用统计",
+            ["类型", "次数", "耗时"],
+            [
+                ["Embedding", str(self.embedding_calls), f"{self.embedding_time:.2f}s"],
+                ["LLM", str(self.llm_calls), f"{self.llm_time:.2f}s"],
+                ["预估 Token", f"~{self.total_tokens_estimated:,}", "-"],
+            ],
+            col_widths=[18, 12, 12],
+        )
+
+        # 4. 流式指标
         if self.details.get('ttft'):
-            print(f"\n⚡ 流式指标:")
-            print(f"   • TTFT (首字延迟): {self.details['ttft']:.2f}s")
-        
-        print("="*80 + "\n")
+            print_kv_table(
+                "⚡ 流式指标",
+                {"TTFT (首字延迟)": f"{self.details['ttft']:.2f}s"},
+                key_width=18, val_width=52,
+            )
 
 
 class PerformanceMonitor:

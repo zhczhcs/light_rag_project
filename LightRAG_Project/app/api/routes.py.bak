@@ -209,8 +209,8 @@ async def delete_all_documents(db: Session = Depends(get_db)):
     print(f"📋 [DeleteAll] 找到 {len(filenames)} 个文档需要删除: {filenames}")
     
     # 第二步：配置 Qdrant 连接信息
-    qdrant_url = "http://YOUR_SERVER_IP:6333"
-    qdrant_api_key = "YOUR_PASSWORD_PLACEHOLDER"
+    qdrant_url = "http://106.52.15.237:6333"
+    qdrant_api_key = ""
     
     # LightRAG 默认使用这三个集合来存储不同类型的数据
     collection_names = [
@@ -317,8 +317,8 @@ async def delete_document(doc_id: int, db: Session = Depends(get_db)):
     print(f"🗑️ [Delete] 准备删除文档: {filename} (ID: {doc_id})")
     
     # Qdrant 连接信息
-    qdrant_url = "http://YOUR_SERVER_IP:6333"
-    qdrant_api_key = "YOUR_PASSWORD_PLACEHOLDER"
+    qdrant_url = "http://106.52.15.237:6333"
+    qdrant_api_key = ""
     
     # 定义集合名称
     chunks_collection = "lightrag_vdb_chunks"

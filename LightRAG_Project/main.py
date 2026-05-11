@@ -2,9 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # 【新增】
 from contextlib import asynccontextmanager
 import uvicorn
+from app.utils.asyncio_compat import configure_windows_event_loop_policy
 # 替换为新的服务和路由管理器
 from app.services.rag_service import init_rag_engine
 from app.api.router_manager import register_dynamic_routes
+# from app.database import _cleanup_tunnel  # 已切换为直连，无需清理隧道
+
+configure_windows_event_loop_policy()
 
 # ===========================
 # 1. 生命周期管理
@@ -14,6 +18,7 @@ async def lifespan(app: FastAPI):
     print("🚀 系统正在启动...")
     await init_rag_engine()
     yield
+    # _cleanup_tunnel()  # 已切换为直连，无需清理隧道
     print("🛑 系统已关闭")
 
 app = FastAPI(
