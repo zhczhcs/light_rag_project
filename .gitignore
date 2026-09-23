@@ -25,6 +25,7 @@ wheels/
 .env.bak*
 .venv
 venv/
+venv_verify/
 ENV/
 
 # Data & logs
@@ -33,6 +34,7 @@ backups/
 *.log
 *.db
 *.sqlite
+security_eval/tool_calls.jsonl
 
 # IDE
 .vscode/

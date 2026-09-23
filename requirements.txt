@@ -1,0 +1,42 @@
+# ============================================================
+# Secure Agentic RAG — Python 直接依赖清单
+# ------------------------------------------------------------
+# 生成方式：通读 main.py 与 app/ 下全部源码，裁剪出"直接 import 依赖"，
+# 而非 `pip freeze` 全量倾倒（传递依赖由 pip 解析）。
+# 环境基线：Python 3.10+（开发机为 conda py3.10；已在 py3.13 干净 venv 验证可安装）
+# 注意：运行系统还需要外部服务 MySQL / Qdrant / Redis（见 .env 配置）
+# ============================================================
+
+# --- Web 框架 ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.0.0
+pydantic[email]              # auth.py 使用 EmailStr
+python-multipart>=0.0.9     # documents.py 文件上传（UploadFile/File 解析）
+
+# --- RAG 核心 ---
+lightrag-hku>=1.3.9          # 提供 lightrag 包（本项目 LightRAG 5.8 的二次开发基座）
+qdrant-client>=1.12.0        # LightRAG QdrantVectorDBStorage 向量后端
+openai>=1.50.0               # AsyncOpenAI：LLM / Embedding / Rerank 统一客户端
+aiohttp>=3.10.0              # engine.py 直接引用
+httpx>=0.27.0                # cleanup_service.py 直接引用
+
+# --- 任务队列 ---
+celery[redis]>=5.4.0         # 文档索引异步任务；redis 为 broker（REDIS_URL）
+
+# --- 数据库 ---
+sqlalchemy>=2.0.0
+pymysql>=1.1.0               # MySQL 直连驱动（mysql+pymysql://）
+
+# --- 认证与安全 ---
+python-jose[cryptography]>=3.3.0   # JWT HS256（app/core/security.py）
+bcrypt>=4.1.0                      # 密码哈希
+
+# --- 文档解析 ---
+PyMuPDF>=1.24.0              # fitz：PDF 文本提取（file_service.py）
+python-docx>=1.1.0           # docx：Word 解析（file_service.py）
+
+# --- 其他 ---
+python-dotenv>=1.0.0         # celery_app.py 加载 .env
+numpy>=1.26.0
+networkx>=3.2.0              # cleanup_service.py 图谱清理

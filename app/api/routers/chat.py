@@ -22,7 +22,7 @@ from app.database import UserModel, get_db, ChatSessionModel, ChatMessageModel, 
 
 # 临时日志过滤：只保留系统关键日志，其他 print 全部静音。
 # 恢复方式：删除本函数与下一行 print 绑定即可。
-_KEEP_PATTERNS = ("[Context", "[Keywords", "[Agentic", "[HyDE", "[Rerank", "[RefInject", "[Engine")
+_KEEP_PATTERNS = ("[Context", "[Keywords", "[Agentic", "[HyDE", "[Rerank", "[RefInject", "[Engine", "[TOOL-CALL]", "[MOCK-TOOL]")
 
 def _context_only_print(*args, **kwargs):
     msg = " ".join(str(a) for a in args)
@@ -301,12 +301,60 @@ async def chat_with_rag(
         print("⏱️ " + _elapsed() + " 📝 [Context] 历史上下文构建完成, " + str(len(conversation_history)) + " 条消息")
 
         # =========================================================
-        # 🛠️ LLM Agent 工具调用 (Function Calling) 拦截层 — 已禁用
+        # 🛠️ Phase 1: LLM 工具调用链路（Mock 高风险工具，当前无网关、直接执行）
+        #    detect_tool_intent → parse_tool_intent（解析点）
+        #    → execute_tool_intent（执行点，Phase 5 网关插这里）
+        #    → mock_tools.execute_mock_tool（唯一执行入口 + JSONL 审计日志）
+        #    未检测到意图则完全走原有 RAG 流程，本块相当于旁路拦截层。
         # =========================================================
-        tool_call_result = None
-        _agent_client = None
-        # 注：工具调用为实验性功能，当前已全局禁用
-        # =========================================================
+        from app.services.tool_call_service import (
+            detect_tool_intent,
+            execute_tool_intent,
+            build_tool_answer,
+        )
+        tool_intent = await detect_tool_intent(query_text, conversation_history)
+        if tool_intent:
+            _tc_user_context = {
+                "id": current_user.id,
+                "username": current_user.username,
+                "role": current_user.role,
+                "department_id": current_user.department_id,
+            }
+            tool_result = execute_tool_intent(tool_intent, user_context=_tc_user_context)
+            tool_answer = build_tool_answer(tool_intent, tool_result)
+            print("⏱️ " + _elapsed() + " 🛠️ [TOOL-CALL] 工具已执行(无网关): " + tool_intent["tool"]
+                  + " → " + str(tool_result.get("status", "?")))
+
+            async def tool_event_generator():
+                try:
+                    yield json.dumps({
+                        "type": "meta",
+                        "data": {"model": selected_model, "mode": "tool_call", "tool": tool_intent["tool"]},
+                    }, ensure_ascii=False) + "\n"
+                    yield json.dumps({"type": "content", "data": tool_answer}, ensure_ascii=False) + "\n"
+                    yield json.dumps({"type": "sources", "data": []}, ensure_ascii=False) + "\n"
+                    yield json.dumps({"type": "done", "data": {"model": selected_model, "tokens": 0}}, ensure_ascii=False) + "\n"
+
+                    if request.session_id:
+                        ai_msg = ChatMessageModel(
+                            session_id=request.session_id,
+                            role="ai",
+                            content=tool_answer,
+                            sources="[]",
+                            model_name=selected_model,
+                            tokens=None,
+                        )
+                        db.add(ai_msg)
+                        db.commit()
+                        db.refresh(ai_msg)
+                        yield json.dumps({"type": "message_id", "data": ai_msg.id}, ensure_ascii=False) + "\n"
+                except Exception as e:
+                    print("❌ [TOOL-CALL] 工具结果回注异常: " + str(e))
+                    yield json.dumps({"type": "error", "data": str(e)}, ensure_ascii=False) + "\n"
+                finally:
+                    monitor.remove_collector(session_id)
+
+            return StreamingResponse(tool_event_generator(), media_type="application/x-ndjson")
 
         retrieval_start_time = time.time()
         reset_global_stats()
