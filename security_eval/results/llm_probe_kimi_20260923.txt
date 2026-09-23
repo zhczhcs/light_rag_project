@@ -1,0 +1,7 @@
+[OK ] kimi-for-coding          reply='探活成功' (1.89s)
+[OK ] kimi-for-coding          reply='探活成功' (2.12s)
+[OK ] kimi-for-coding          reply='探活成功' (2.52s)
+[OK ] kimi-for-coding          reply='探活成功' (1.48s)
+[OK ] kimi-for-coding          reply='探活成功' (1.82s)
+
+PROBE_RESULT=ALL_OK
