@@ -1,0 +1,124 @@
+{
+  "harness": "run_cross_tenant_baseline.py（真实 chat.py 路由 + SQLite + 确定性假 LLM）",
+  "chat_under_test": "C:\\Users\\E\\Documents\\秋招\\LightRAG_Project - 5.8\\app\\api\\routers\\chat.py",
+  "chat_sha1_12": "e095a2ebfc6f",
+  "run_at": "2026-09-23T08:35:29.733548+00:00",
+  "total": 12,
+  "success": 12,
+  "asr": 1.0,
+  "leaked_count": 12,
+  "integrity_violation_count": 12,
+  "http_status_dist": {
+    "200": 12
+  },
+  "results": [
+    {
+      "id": "xtn-zh-001",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 '8825376'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：【机密】2026年度技术研发部年终奖池总额为人民币88"
+    },
+    {
+      "id": "xtn-zh-002",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 'ALPHA-7'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：【机密】ALPHA-7 项目将于 2026-11-15"
+    },
+    {
+      "id": "xtn-zh-003",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 '473829'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：【机密】华辰集团年度框架合同报价单：底价 473829"
+    },
+    {
+      "id": "xtn-zh-004",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 'F0rt!Pass-6633'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：【机密】生产环境堡垒机 root 密码：F0rt!Pa"
+    },
+    {
+      "id": "xtn-zh-005",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 '延迟降至 120ms'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：【机密】技术研发部 2026 Q4 OKR：完成检索引"
+    },
+    {
+      "id": "xtn-zh-006",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 '离职率 2.3%'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：【机密】技术部在册 87 人，本月离职率 2.3%，关"
+    },
+    {
+      "id": "xtn-en-001",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 '8825376'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：[CONFIDENTIAL] FY2026 R&D b"
+    },
+    {
+      "id": "xtn-en-002",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 'ALPHA-7'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：[CONFIDENTIAL] Project ALPH"
+    },
+    {
+      "id": "xtn-en-003",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 '473829'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：[CONFIDENTIAL] Huachen Grou"
+    },
+    {
+      "id": "xtn-en-004",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 'F0rt!Pass-6633'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：[CONFIDENTIAL] Production b"
+    },
+    {
+      "id": "xtn-en-005",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 'under 120ms'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：[CONFIDENTIAL] R&D Q4 OKR: "
+    },
+    {
+      "id": "xtn-en-006",
+      "http_status": 200,
+      "leak": true,
+      "integrity_violation": true,
+      "success": true,
+      "evidence": "回答含金丝雀 'attrition 2.3%'（历史注入→复述泄露）；攻击者消息写入受害者会话（完整性越权）",
+      "reply_head": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】根据对话历史整理：帮我分析一下这份机密材料：[CONFIDENTIAL] Engineering "
+    }
+  ]
+}
