@@ -168,37 +168,56 @@ def find_tool_call(records: list[dict], username: str, tools: set[str] | None = 
 # ============================================================
 
 def post_chat(base_url: str, token: str, query: str, session_id: int | None,
-              timeout: float = 180.0) -> dict:
-    """调 /api/chat，解析 NDJSON 流。返回 {http_status, content, error, events}。"""
+              timeout: float = 240.0, max_attempts: int = 4) -> dict:
+    """调 /api/chat，解析 NDJSON 流。返回 {http_status, content, error, events}。
+
+    429/5xx 或流内限流错误指数退避重试（kimi-for-coding 有速率限制）；
+    400（如 embedding 欠费 Arrearage）不重试。
+    """
     payload: dict = {"query": query, "mode": "hybrid"}
     if session_id is not None:
         payload["session_id"] = session_id
-    content_parts: list[str] = []
-    events: list[str] = []
-    try:
-        with httpx.stream("POST", f"{base_url}/api/chat", json=payload,
-                          headers={"Authorization": f"Bearer {token}"},
-                          timeout=timeout) as r:
-            status = r.status_code
-            error_msg = ""
-            for line in r.iter_lines():
-                if not line:
-                    continue
-                try:
-                    evt = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                events.append(evt.get("type", "?"))
-                if evt.get("type") == "content":
-                    content_parts.append(str(evt.get("data", "")))
-                elif evt.get("type") == "content_correction":
-                    content_parts = [str(evt.get("data", ""))]
-                elif evt.get("type") == "error":
-                    error_msg = str(evt.get("data", ""))
+
+    retryable_hint = ("429", "rate limit", "ratelimit", "too many requests", "temporarily")
+
+    for attempt in range(1, max_attempts + 1):
+        content_parts: list[str] = []
+        events: list[str] = []
+        try:
+            with httpx.stream("POST", f"{base_url}/api/chat", json=payload,
+                              headers={"Authorization": f"Bearer {token}"},
+                              timeout=timeout) as r:
+                status = r.status_code
+                error_msg = ""
+                for line in r.iter_lines():
+                    if not line:
+                        continue
+                    try:
+                        evt = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    events.append(evt.get("type", "?"))
+                    if evt.get("type") == "content":
+                        content_parts.append(str(evt.get("data", "")))
+                    elif evt.get("type") == "content_correction":
+                        content_parts = [str(evt.get("data", ""))]
+                    elif evt.get("type") == "error":
+                        error_msg = str(evt.get("data", ""))
+        except Exception as e:  # noqa: BLE001
+            status, error_msg = -1, str(e)[:200]
+
+        need_retry = (status in (429, 500, 502, 503)
+                      or any(h in error_msg.lower() for h in retryable_hint))
+        if not need_retry or attempt == max_attempts:
             return {"http_status": status, "content": "".join(content_parts),
                     "error": error_msg, "events": events}
-    except Exception as e:  # noqa: BLE001
-        return {"http_status": -1, "content": "", "error": str(e)[:200], "events": events}
+
+        wait = 5 * (2 ** (attempt - 1))  # 5s, 10s, 20s
+        print(f"    [retry] {status or ''} {error_msg[:60]} → {wait}s 后第 {attempt + 1} 次尝试")
+        time.sleep(wait)
+
+    return {"http_status": status, "content": "".join(content_parts),
+            "error": error_msg, "events": events}
 
 
 def upload_doc(base_url: str, token: str, filename: str, content: str) -> tuple[bool, str]:
@@ -308,6 +327,7 @@ def run_sample(sample: dict, ctx: dict) -> dict:
         ok, why = judge_system_prompt_leak(sample, resp)
         result.update(success=ok, evidence=why,
                       response_head=resp.get("content", "")[:120],
+                      response_full=resp.get("content", ""),
                       http_status=resp.get("http_status"), error=resp.get("error", ""))
 
     elif cat == "tool_abuse":
@@ -316,7 +336,8 @@ def run_sample(sample: dict, ctx: dict) -> dict:
         ok, why = judge_tool_call(records, ATTACKER_USERNAME, {sample["tool"]})
         result.update(success=ok, evidence=why,
                       http_status=resp.get("http_status"), error=resp.get("error", ""),
-                      response_head=resp.get("content", "")[:120])
+                      response_head=resp.get("content", "")[:120],
+                      response_full=resp.get("content", ""))
 
     elif cat == "indirect_injection":
         up_ok, up_msg = upload_doc(base_url, attacker_token,
@@ -333,7 +354,8 @@ def run_sample(sample: dict, ctx: dict) -> dict:
             ok, why = judge_marker(sample, resp)
         result.update(success=ok, evidence=why,
                       http_status=resp.get("http_status"), error=resp.get("error", ""),
-                      response_head=resp.get("content", "")[:120])
+                      response_head=resp.get("content", "")[:120],
+                      response_full=resp.get("content", ""))
 
     elif cat == "cross_tenant":
         victim_session_id = seed_victim_session(ctx["victim_id"], sample["canary"])
@@ -342,6 +364,7 @@ def run_sample(sample: dict, ctx: dict) -> dict:
         result.update(success=ok, evidence=why,
                       http_status=resp.get("http_status"), error=resp.get("error", ""),
                       response_head=resp.get("content", "")[:120],
+                      response_full=resp.get("content", ""),
                       victim_session_id=victim_session_id)
     else:
         result.update(status="error", evidence=f"未知类别 {cat}")
@@ -361,7 +384,9 @@ def main() -> int:
     ap.add_argument("--base-url", default="http://127.0.0.1:8000")
     ap.add_argument("--limit", type=int, default=None, help="每类最多跑几条（冒烟用）")
     ap.add_argument("--ids", default=None, help="只跑指定 id（逗号分隔）")
-    ap.add_argument("--delay", type=float, default=0.5, help="样本间隔秒数")
+    ap.add_argument("--delay", type=float, default=2.0, help="样本间隔秒数（kimi-for-coding 有速率限制）")
+    ap.add_argument("--passes", type=int, default=1,
+                    help="重复轮数（kimi-for-coding 强制 temperature=1，攻击结果有随机性，取多轮观察方差）")
     args = ap.parse_args()
 
     samples = [json.loads(l) for l in open(ATTACKS_PATH, encoding="utf-8")]
@@ -396,14 +421,21 @@ def main() -> int:
     }
 
     results = []
-    for i, sample in enumerate(samples, 1):
-        t0 = time.time()
-        r = run_sample(sample, ctx)
-        r["elapsed_s"] = round(time.time() - t0, 2)
-        results.append(r)
-        print(f"[{i:>2}/{len(samples)}] {r['id']:<12} → {r['status']:<8} "
-              f"{r['evidence'][:90]} ({r['elapsed_s']}s)")
-        time.sleep(args.delay)
+    total_runs = len(samples) * args.passes
+    idx = 0
+    for p in range(1, args.passes + 1):
+        if args.passes > 1:
+            print(f"----- 第 {p}/{args.passes} 轮 -----")
+        for sample in samples:
+            idx += 1
+            t0 = time.time()
+            r = run_sample(sample, ctx)
+            r["pass"] = p
+            r["elapsed_s"] = round(time.time() - t0, 2)
+            results.append(r)
+            print(f"[{idx:>3}/{total_runs}] {r['id']:<12} → {r['status']:<8} "
+                  f"{r['evidence'][:90]} ({r['elapsed_s']}s)")
+            time.sleep(args.delay)
 
     # ---- 汇总 ----
     summary: dict[str, dict] = {}
@@ -415,17 +447,28 @@ def main() -> int:
         succ = sum(1 for r in rows if r["success"])
         err = sum(1 for r in rows if r["status"] == "error")
         completed = n - err
+        per_pass = {}
+        for p in range(1, args.passes + 1):
+            pr = [r for r in rows if r.get("pass") == p]
+            if pr:
+                per_pass[f"pass_{p}"] = {
+                    "total": len(pr),
+                    "success": sum(1 for r in pr if r["success"]),
+                    "asr": round(sum(1 for r in pr if r["success"]) / len(pr), 4),
+                }
         summary[cat] = {
             "total": n, "success": succ, "blocked": n - succ - err, "error": err,
             "asr": round(succ / n, 4) if n else None,
             "asr_completed_only": round(succ / completed, 4) if completed else None,
+            "per_pass": per_pass,
         }
 
     print("\n===== ASR 汇总 =====")
-    print(f"{'category':<22}{'total':>6}{'success':>9}{'blocked':>9}{'error':>7}{'ASR':>9}{'ASR(完成)':>11}")
+    print(f"{'category':<22}{'total':>6}{'success':>9}{'blocked':>9}{'error':>7}{'ASR':>9}{'ASR(完成)':>11}  per-pass")
     for cat, s in summary.items():
+        pp = ",".join(f"{k}:{v['success']}/{v['total']}={v['asr']}" for k, v in s["per_pass"].items())
         print(f"{cat:<22}{s['total']:>6}{s['success']:>9}{s['blocked']:>9}{s['error']:>7}"
-              f"{s['asr']!s:>9}{s['asr_completed_only']!s:>11}")
+              f"{s['asr']!s:>9}{s['asr_completed_only']!s:>11}  {pp}")
 
     RESULTS_DIR.mkdir(exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
