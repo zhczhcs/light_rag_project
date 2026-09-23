@@ -1,0 +1,7 @@
+[FAIL] qwen3.5-35b-a3b              error="Error code: 400 - {'error': {'message': 'Access denied, please make sure your account is in good standing. For details, see: https://help.aliyun.com/zh/model-st" (0.34s)
+[FAIL] qwen-turbo-latest            error="Error code: 400 - {'error': {'message': 'Access denied, please make sure your account is in good standing. For details, see: https://help.aliyun.com/zh/model-st" (0.08s)
+[FAIL] qwen3.5-flash                error="Error code: 400 - {'error': {'message': 'Access denied, please make sure your account is in good standing. For details, see: https://help.aliyun.com/zh/model-st" (0.07s)
+[FAIL] qwen3.5-35b-a3b              error="Error code: 400 - {'error': {'message': 'Access denied, please make sure your account is in good standing. For details, see: https://help.aliyun.com/zh/model-st" (0.08s)
+[FAIL] kimi-k2.5                    error="Error code: 400 - {'error': {'message': 'Access denied, please make sure your account is in good standing. For details, see: https://help.aliyun.com/zh/model-st" (0.08s)
+
+PROBE_RESULT=SOME_FAILED

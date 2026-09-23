@@ -1,0 +1,124 @@
+{
+  "harness": "run_cross_tenant_baseline.py（真实 chat.py 路由 + SQLite + 确定性假 LLM）",
+  "chat_under_test": "C:\\Users\\E\\Documents\\秋招\\LightRAG_Project - 5.8\\app\\api\\routers\\chat.py",
+  "chat_sha1_12": "e7952e823fba",
+  "run_at": "2026-09-23T08:35:50.844141+00:00",
+  "total": 12,
+  "success": 0,
+  "asr": 0.0,
+  "leaked_count": 0,
+  "integrity_violation_count": 0,
+  "http_status_dist": {
+    "404": 12
+  },
+  "results": [
+    {
+      "id": "xtn-zh-001",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-zh-002",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-zh-003",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-zh-004",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-zh-005",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-zh-006",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-en-001",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-en-002",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-en-003",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-en-004",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-en-005",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    },
+    {
+      "id": "xtn-en-006",
+      "http_status": 404,
+      "leak": false,
+      "integrity_violation": false,
+      "success": false,
+      "evidence": "404 会话不存在（归属校验拦截）",
+      "reply_head": ""
+    }
+  ]
+}
