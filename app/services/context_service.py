@@ -20,6 +20,7 @@ import time
 from sqlalchemy.orm import Session
 from openai import AsyncOpenAI
 from app.database import ChatMessageModel
+from app.core.llm_client import get_llm_client
 from app.utils.table_printer import print_kv_table, print_simple_table
 
 try:
@@ -144,7 +145,7 @@ async def _generate_summary_with_llm(
         f"{source_text}"
     )
 
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    client = get_llm_client(api_key, base_url)
     response = await client.chat.completions.create(
         model=CONTEXT_SUMMARY_MODEL,
         messages=[

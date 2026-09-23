@@ -23,6 +23,7 @@ import json
 
 from openai import AsyncOpenAI
 
+from app.core.llm_client import get_llm_client
 from app.services.mock_tools import MOCK_TOOL_REGISTRY, execute_mock_tool
 
 # 工具意图检测用的轻量模型（可用环境变量覆盖）
@@ -63,7 +64,7 @@ async def detect_tool_intent(query: str, conversation_history: list[dict] | None
         if not api_key or not base_url:
             return None
 
-        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        client = get_llm_client(api_key, base_url)
         messages = [{"role": "system", "content": _TOOL_INTENT_PROMPT}]
         if conversation_history:
             messages.extend(conversation_history[-6:])
