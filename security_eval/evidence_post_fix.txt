@@ -1,0 +1,39 @@
+Phase3 tenant-boundary repro report
+project HEAD: see tenant_fix_notes.md
+
+[ATTACK-1 会话IDOR: bob 用 alice 的 session_id 调用 POST /api/chat]
+http_status = 404
+response_head = {"detail":"会话不存在"}
+victim_session_messages_after = [('user', '【敏感】技术研发部第四季度薪资架构与期权方案'), ('ai', '【敏感】这是薪资架构的详细分析……')]
+victim_session_title_after = 新对话
+llm_received_messages = None
+evidence_write = 未见写入
+evidence_read = 未见历史泄露
+evidence_title = 标题未变
+
+[ATTACK-2 注册自选部门: mallory 注册时指定 department_id=1(技术研发部)]
+http_status = 422
+response = {"detail":[{"type":"extra_forbidden","loc":["body","department_id"],"msg":"Extra inputs are not permitted","input":1}]}
+mallory_row = None
+evidence = 自选部门未生效
+
+[REG-1 正常问答: alice 用自己的 session_id 调 /api/chat]
+http_status = 200
+stream_has_done = True
+session_message_count = 4
+
+[REG-2 会话历史读取: alice(所有者) vs bob(非所有者)]
+alice_status = 200
+bob_status = 404
+
+[REG-5 无session纯问答: alice 不传 session_id 调 /api/chat]
+http_status = 200
+stream_has_done = True
+
+[REG-3 注册(无部门字段): carol 注册时不传 department_id]
+http_status = 200
+carol_row = {'id': 3, 'department_id': None}
+
+[REG-4 管理员改部门: PATCH /api/admin/users/{id}/department?dept_id=1]
+http_status = 200
+carol_row_after = {'id': 3, 'department_id': 1}

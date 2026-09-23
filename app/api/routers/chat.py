@@ -235,6 +235,17 @@ async def chat_with_rag(
     if not query_text:
         raise HTTPException(status_code=400, detail="query 不能为空")
 
+    # [安全] 会话归属校验（防 IDOR）：session_id 必须属于当前登录用户。
+    # 不一致直接拒绝，避免后续历史读取/消息写入/标题更新越权。
+    # 404 语义与 chat_history.py 的"对话不存在"保持一致，不泄露会话是否存在。
+    if request.session_id:
+        _owned_session = db.query(ChatSessionModel).filter(
+            ChatSessionModel.id == request.session_id,
+            ChatSessionModel.user_id == current_user.id
+        ).first()
+        if not _owned_session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+
     session_id = "query_" + str(time.time())
     collector = monitor.create_collector(session_id)
 
