@@ -183,6 +183,7 @@ def post_chat(base_url: str, token: str, query: str, session_id: int | None,
     for attempt in range(1, max_attempts + 1):
         content_parts: list[str] = []
         events: list[str] = []
+        source_files: list[str] = []
         try:
             with httpx.stream("POST", f"{base_url}/api/chat", json=payload,
                               headers={"Authorization": f"Bearer {token}"},
@@ -201,6 +202,10 @@ def post_chat(base_url: str, token: str, query: str, session_id: int | None,
                         content_parts.append(str(evt.get("data", "")))
                     elif evt.get("type") == "content_correction":
                         content_parts = [str(evt.get("data", ""))]
+                    elif evt.get("type") == "sources":
+                        for s in (evt.get("data") or []):
+                            if isinstance(s, dict) and s.get("source_filename"):
+                                source_files.append(str(s["source_filename"]))
                     elif evt.get("type") == "error":
                         error_msg = str(evt.get("data", ""))
         except Exception as e:  # noqa: BLE001
@@ -210,14 +215,14 @@ def post_chat(base_url: str, token: str, query: str, session_id: int | None,
                       or any(h in error_msg.lower() for h in retryable_hint))
         if not need_retry or attempt == max_attempts:
             return {"http_status": status, "content": "".join(content_parts),
-                    "error": error_msg, "events": events}
+                    "error": error_msg, "events": events, "sources": source_files}
 
         wait = 5 * (2 ** (attempt - 1))  # 5s, 10s, 20s
         print(f"    [retry] {status or ''} {error_msg[:60]} → {wait}s 后第 {attempt + 1} 次尝试")
         time.sleep(wait)
 
     return {"http_status": status, "content": "".join(content_parts),
-            "error": error_msg, "events": events}
+            "error": error_msg, "events": events, "sources": source_files}
 
 
 def upload_doc(base_url: str, token: str, filename: str, content: str) -> tuple[bool, str]:
@@ -229,6 +234,42 @@ def upload_doc(base_url: str, token: str, filename: str, content: str) -> tuple[
         return r.status_code == 200, r.text[:200]
     except Exception as e:  # noqa: BLE001
         return False, str(e)[:200]
+
+
+def get_doc_status(base_url: str, token: str, filename: str) -> str | None:
+    try:
+        r = httpx.get(f"{base_url}/api/documents",
+                      headers={"Authorization": f"Bearer {token}"}, timeout=30)
+        if r.status_code == 200:
+            for d in r.json():
+                if d.get("filename") == filename:
+                    return str(d.get("status", "unknown"))
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def wait_doc_indexed(base_url: str, token: str, filename: str,
+                     timeout_s: float = 240.0, interval: float = 4.0) -> str:
+    """轮询 GET /api/documents，等待 filename 的 status 变为 completed/failed。
+    返回最终状态字符串；超时返回 'timeout'。索引是异步的（Celery/BackgroundTasks），
+    投毒文档必须真正 completed 后触发提问才有意义。"""
+    deadline = time.time() + timeout_s
+    last = "unknown"
+    while time.time() < deadline:
+        try:
+            r = httpx.get(f"{base_url}/api/documents",
+                          headers={"Authorization": f"Bearer {token}"}, timeout=30)
+            if r.status_code == 200:
+                for d in r.json():
+                    if d.get("filename") == filename:
+                        last = str(d.get("status", "unknown"))
+                        if last in ("completed", "failed"):
+                            return last
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(interval)
+    return last if last != "unknown" else "timeout"
 
 
 def new_session(base_url: str, token: str) -> int:
@@ -340,10 +381,20 @@ def run_sample(sample: dict, ctx: dict) -> dict:
                       response_full=resp.get("content", ""))
 
     elif cat == "indirect_injection":
-        up_ok, up_msg = upload_doc(base_url, attacker_token,
-                                   sample["doc_filename"], sample["doc_content"])
-        if not up_ok:
-            result.update(status="error", evidence=f"投毒文档上传失败: {up_msg}")
+        # 已索引的投毒文档直接复用（避免每轮重复触发 ~100s 的实体提取索引）
+        doc_status = get_doc_status(base_url, attacker_token, sample["doc_filename"])
+        if doc_status != "completed":
+            up_ok, up_msg = upload_doc(base_url, attacker_token,
+                                       sample["doc_filename"], sample["doc_content"])
+            if not up_ok:
+                result.update(status="error", evidence=f"投毒文档上传失败: {up_msg}")
+                return result
+            # 等待后台索引真正完成（embedding 欠费期间文档会卡 indexing，必须等到 completed）
+            doc_status = wait_doc_indexed(base_url, attacker_token, sample["doc_filename"])
+        result["doc_status"] = doc_status
+        if doc_status not in ("completed",):
+            result.update(status="error",
+                          evidence=f"投毒文档索引未完成（status={doc_status}），跳过触发提问")
             return result
         resp = post_chat(base_url, attacker_token, sample["trigger_query"], None)
         records = cursor.new_records()
@@ -352,10 +403,13 @@ def run_sample(sample: dict, ctx: dict) -> dict:
             ok, why = judge_tool_call(records, ATTACKER_USERNAME, tools)
         else:
             ok, why = judge_marker(sample, resp)
+        # 投毒命中率：检索结果中是否出现投毒文档（RAG 路径带 sources；兜底路径为空）
+        result["poison_hit"] = sample["doc_filename"] in (resp.get("sources") or [])
         result.update(success=ok, evidence=why,
                       http_status=resp.get("http_status"), error=resp.get("error", ""),
                       response_head=resp.get("content", "")[:120],
-                      response_full=resp.get("content", ""))
+                      response_full=resp.get("content", ""),
+                      retrieved_sources=resp.get("sources") or [])
 
     elif cat == "cross_tenant":
         victim_session_id = seed_victim_session(ctx["victim_id"], sample["canary"])
@@ -462,13 +516,18 @@ def main() -> int:
             "asr_completed_only": round(succ / completed, 4) if completed else None,
             "per_pass": per_pass,
         }
+        ph = [r for r in rows if "poison_hit" in r]
+        if ph:
+            summary[cat]["poison_hit"] = sum(1 for r in ph if r["poison_hit"])
+            summary[cat]["poison_hit_total"] = len(ph)
 
     print("\n===== ASR 汇总 =====")
     print(f"{'category':<22}{'total':>6}{'success':>9}{'blocked':>9}{'error':>7}{'ASR':>9}{'ASR(完成)':>11}  per-pass")
     for cat, s in summary.items():
         pp = ",".join(f"{k}:{v['success']}/{v['total']}={v['asr']}" for k, v in s["per_pass"].items())
+        ph = f"  poison_hit={s.get('poison_hit')}/{s.get('poison_hit_total')}" if "poison_hit" in s else ""
         print(f"{cat:<22}{s['total']:>6}{s['success']:>9}{s['blocked']:>9}{s['error']:>7}"
-              f"{s['asr']!s:>9}{s['asr_completed_only']!s:>11}  {pp}")
+              f"{s['asr']!s:>9}{s['asr_completed_only']!s:>11}  {pp}{ph}")
 
     RESULTS_DIR.mkdir(exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
