@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
-from app.database import get_db, UserModel, DepartmentModel
+from app.database import get_db, UserModel
 from app.core.security import (
     verify_password,
     get_password_hash,
@@ -16,10 +16,14 @@ from app.core.security import (
 router = APIRouter(prefix="/auth", tags=["认证"])
 
 class UserRegister(BaseModel):
+    # [安全] 注册不再接受 department_id（extra="forbid" 直接拒绝该字段）：
+    # 新用户默认无部门，由管理员事后通过 PATCH /admin/users/{user_id}/department 分配，
+    # 防止攻击者注册时自选部门、立即获得该部门知识库访问权（跨租户越权）。
+    model_config = ConfigDict(extra="forbid")
+
     username: str
     email: EmailStr
     password: str
-    department_id: int  # 必填，注册时选择所属部门
 
 class UserLogin(BaseModel):
     username: str
@@ -44,11 +48,6 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     if existing_email:
         raise HTTPException(status_code=400, detail="邮箱已被注册")
     
-    # 校验部门存在
-    dept = db.query(DepartmentModel).filter(DepartmentModel.id == user_data.department_id).first()
-    if not dept:
-        raise HTTPException(status_code=400, detail="所选部门不存在")
-
     hashed_password = get_password_hash(user_data.password)
     new_user = UserModel(
         username=user_data.username,
@@ -56,7 +55,7 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         hashed_password=hashed_password,
         role="user",
         is_active=True,
-        department_id=user_data.department_id
+        department_id=None  # 新用户默认无部门，待管理员分配
     )
     db.add(new_user)
     db.commit()
@@ -227,9 +226,3 @@ async def test_security_functions():
             ) else "❌ Token 结构错误"
         }
     }
-
-@router.get("/departments", summary="获取部门列表（注册用，无需登录）")
-async def get_departments(db: Session = Depends(get_db)):
-    """返回所有可用部门列表，供注册页面下拉选择"""
-    departments = db.query(DepartmentModel).all()
-    return [{"id": d.id, "name": d.name} for d in departments]

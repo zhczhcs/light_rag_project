@@ -1,0 +1,33 @@
+Phase3 tenant-boundary repro report
+project HEAD: see tenant_fix_notes.md
+
+[ATTACK-1 会话IDOR: bob 用 alice 的 session_id 调用 POST /api/chat]
+http_status = 200
+response_head = {"type": "meta", "data": {"model": "qwen3.6-plus-2026-04-02", "mode": "hybrid"}} {"type": "content", "data": "> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n"} {"type": "content", "data": "【模拟LLM回答】这是一个模
+victim_session_messages_after = [('user', '【敏感】技术研发部第四季度薪资架构与期权方案'), ('ai', '【敏感】这是薪资架构的详细分析……'), ('user', '测试问题'), ('ai', '> *由于不存在相关性强的知识库内容，以下基于 AI 自身知识回答，仅供参考。*\n\n【模拟LLM回答】这是一个模拟回答。')]
+victim_session_title_after = 测试 相关的问题
+llm_received_messages = [('system', '你是一个知识渊博的AI助手，用中文回答用户的问题。'), ('user', '【敏感】技术研发部第四季度薪资架构与期权方案'), ('assistant', '【敏感】这是薪资架构的详细分析……'), ('user', '测试问题')]
+evidence_write = 受害者会话出现攻击者写入的(user, 测试问题)
+evidence_read = LLM上下文出现受害者历史(敏感)
+evidence_title = 标题被篡改
+
+[ATTACK-2 注册自选部门: mallory 注册时指定 department_id=1(技术研发部)]
+http_status = 200
+response = {"message":"注册成功","user_id":3}
+mallory_row = {'id': 3, 'department_id': 1}
+evidence = mallory.department_id == 1（自选部门成功）
+
+[REG-1 正常问答: alice 用自己的 session_id 调 /api/chat]
+http_status = 200
+stream_has_done = True
+session_message_count = 6
+
+[REG-2 会话历史读取: alice(所有者) vs bob(非所有者)]
+alice_status = 200
+bob_status = 404
+
+[REG-3 注册(无部门字段): carol 注册时不传 department_id]
+http_status = 422
+carol_row = None
+
+[REG-4 管理员改部门: 跳过（carol 注册失败，无测试对象）]
