@@ -16,6 +16,7 @@ from lightrag.rerank import ali_rerank, generic_rerank_api
 from lightrag.kg.shared_storage import _init_flags, _shared_dicts, get_final_namespace
 from openai import AsyncOpenAI
 from app.core.globals import model_context, metrics_context  # ✅ 引入监控上下文
+from app.core.llm_client import get_llm_client
 from app.utils.table_printer import print_kv_table, print_simple_table
 
 _QDRANT_HOST = os.environ.get("QDRANT_HOST")
@@ -32,56 +33,156 @@ PROMPTS["fail_response"] = "抱歉，知识库中没有找到与您问题相关�
 # LightRAG 默认将 reference_id 作为 JSON 字段放在 chunk 元数据中，但 DS-V3 不将其
 # 视为引用锚点。此函数在 chunk 的 content 文本开头注入 [n] 标记，使 DS-V3 能看到
 # 明确的内容-来源对应关系并自然地在回答中输出 [n] 引用。
+#
+# 同时，函数利用 operate.py 保留的 file_path 字段，将 Reference Document List 中的
+# 文件名→引用编号映射注入到 Knowledge Graph 实体和关系的 JSON 中（source_refs 字段），
+# 让 LLM 能够为图谱路径得出的结论提供可追溯的引用。
+_GRAPH_FIELD_SEP = "<SEP>"
+
 def _inject_ref_ids_into_chunks(system_prompt: str) -> str:
-    """将 [n] 引用标记注入到 Document Chunks 的 content 字段开头。
-    
-    输入格式（JSONL，每行一个chunk）：
-      {"reference_id": "1", "content": "辗转相除法的核心是..."}
-    
-    输出格式：
-      {"reference_id": "1", "content": "[1] 辗转相除法的核心是..."}
-    
+    """将 [n] 引用标记注入到 Document Chunks 的 content 字段开头，
+    并将 source_refs 注入到 Knowledge Graph 实体/关系 JSON 中。
+
+    Chunk 注入：
+      输入：{"reference_id": "1", "content": "辗转相除法的核心是..."}
+      输出：{"reference_id": "1", "content": "[1] 辗转相除法的核心是..."}
+
+    图谱实体/关系注入（依赖 operate.py 保留的 file_path 字段）：
+      输入：{"entity": "Lead Frame", "type": "component", "description": "...", "file_path": "xxx.pdf"}
+      输出：{"entity": "Lead Frame", ..., "file_path": "xxx.pdf", "source_refs": ["1", "3"]}
+
     仅对包含 Reference Document List 的 RAG 回答 system_prompt 生效。
     """
     if "Reference Document List" not in system_prompt:
         return system_prompt
-    
-    injected_count = 0
+
+    # ── 第一步：从 Reference Document List 构建 filename → ref_id 映射 ──
+    import re as _re
+    ref_map: dict[str, str] = {}
+    lines_for_ref = system_prompt.split('\n')
+    in_ref_section = False
+    in_ref_code_fence = False
+    for raw_line in lines_for_ref:
+        line = raw_line.strip()
+        if line.startswith("Reference Document List"):
+            in_ref_section = True
+            continue
+
+        if in_ref_section and line.startswith("```") and not in_ref_code_fence:
+            in_ref_code_fence = True
+            continue
+        if in_ref_section and line.startswith("```") and in_ref_code_fence:
+            break
+
+        if in_ref_section and in_ref_code_fence and line:
+            m = _re.match(r'\[(\d+)\]\s+(.+)', line)
+            if m:
+                ref_id_str, filepath = m.group(1), m.group(2).strip()
+                ref_map[filepath] = ref_id_str
+                # 也用 basename 作为备选 key，方便匹配图谱里的短路径
+                ref_map[os.path.basename(filepath)] = ref_id_str
+
+    injected_chunks = 0
+    injected_entities = 0
+    injected_relations = 0
     lines = system_prompt.split('\n')
     modified_lines = []
-    
+
+    # 跟踪当前在哪个段落（用于判断是图谱区还是 Chunk 区）
+    in_entity_section = False
+    in_relation_section = False
+
     for line in lines:
         stripped = line.strip()
-        # 检测 JSONL 格式的 chunk 行
+
+        # ── 段落切换跟踪 ──
+        if 'Knowledge Graph Data (Entity)' in line:
+            in_entity_section = True
+            in_relation_section = False
+        elif 'Knowledge Graph Data (Relationship)' in line:
+            in_entity_section = False
+            in_relation_section = True
+        elif 'Document Chunks' in line:
+            in_entity_section = False
+            in_relation_section = False
+
+        # ── Chunk 引用注入（保持原逻辑） ──
         if stripped.startswith('{"reference_id":') and '"content":' in stripped:
             try:
                 chunk = json.loads(stripped)
                 ref_id = chunk.get("reference_id", "")
                 content = chunk.get("content", "")
-                # 避免重复注入
                 if ref_id and not content.startswith(f"[{ref_id}]"):
                     chunk["content"] = f"[{ref_id}] {content}"
-                    injected_count += 1
+                    injected_chunks += 1
                 modified_lines.append(json.dumps(chunk, ensure_ascii=False))
             except json.JSONDecodeError:
                 modified_lines.append(line)
+
+        # ── 实体 source_refs 注入 ──
+        elif in_entity_section and ref_map and stripped.startswith('{"entity":'):
+            try:
+                entity = json.loads(stripped)
+                file_path = entity.get("file_path", "")
+                refs: list[str] = []
+                for fp in file_path.split(_GRAPH_FIELD_SEP):
+                    fp = fp.strip()
+                    if fp in ref_map:
+                        refs.append(ref_map[fp])
+                    elif os.path.basename(fp) in ref_map:
+                        refs.append(ref_map[os.path.basename(fp)])
+                if refs:
+                    entity["source_refs"] = sorted(set(refs), key=lambda x: int(x))
+                    injected_entities += 1
+                modified_lines.append(json.dumps(entity, ensure_ascii=False))
+            except json.JSONDecodeError:
+                modified_lines.append(line)
+
+        # ── 关系 source_refs 注入 ──
+        elif in_relation_section and ref_map and stripped.startswith('{"entity1":'):
+            try:
+                relation = json.loads(stripped)
+                file_path = relation.get("file_path", "")
+                refs = []
+                for fp in file_path.split(_GRAPH_FIELD_SEP):
+                    fp = fp.strip()
+                    if fp in ref_map:
+                        refs.append(ref_map[fp])
+                    elif os.path.basename(fp) in ref_map:
+                        refs.append(ref_map[os.path.basename(fp)])
+                if refs:
+                    relation["source_refs"] = sorted(set(refs), key=lambda x: int(x))
+                    injected_relations += 1
+                modified_lines.append(json.dumps(relation, ensure_ascii=False))
+            except json.JSONDecodeError:
+                modified_lines.append(line)
+
         else:
             modified_lines.append(line)
-    
-    if injected_count > 0:
+
+    if injected_chunks > 0 or injected_entities > 0 or injected_relations > 0:
         print_kv_table(
             "📌 RefInject: 引用锚点注入",
-            {"注入 chunk 数": f"{injected_count} 个", "锚点格式": "[n]"},
+            {
+                "注入 chunk 数": f"{injected_chunks} 个",
+                "注入实体数": f"{injected_entities} 个",
+                "注入关系数": f"{injected_relations} 个",
+                "锚点格式": "[n]",
+            },
             key_width=16, val_width=44,
         )
-    
+
     return '\n'.join(modified_lines)
 
 # ── Rerank 配置 ──
 # qwen3-rerank：更便宜(0.0005/千token)，支持 instruct 参数
 _RERANK_MODEL = os.environ.get("RERANK_MODEL")
-_RERANK_BASE_URL = "https://dashscope.aliyuncs.com/compatible-api/v1/reranks"
-_MAX_RERANK_CHUNKS = 6  # Rerank 后最多保留的 chunk 数，减少 LLM 上下文 token 消耗
+_RERANK_BASE_URL = os.environ.get("RERANK_BASE_URL", "https://dashscope.aliyuncs.com/compatible-api/v1/reranks")
+_MAX_RERANK_CHUNKS = int(os.environ.get("QUERY_CHUNK_TOP_K", "6"))  # Rerank 后最多保留的 chunk 数，减少 LLM 上下文 token 消耗
+
+# ── 双渠道配置：LLM 走 ALI_*（可指向任何 OpenAI 兼容服务），Embedding/Rerank 走 DASHSCOPE_*（未设置时回退 ALI_*，兼容旧配置）──
+_DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY") or os.environ.get("ALI_API_KEY")
+_DASHSCOPE_BASE_URL = os.environ.get("DASHSCOPE_BASE_URL") or os.environ.get("ALI_BASE_URL")
 
 # ── 参考文献过滤上下文变量 ──
 # 使用 contextvars 保证 asyncio 并发安全
@@ -323,8 +424,8 @@ async def bailian_llm(prompt, system_prompt=None, history_messages=[], **kwargs)
     # 📊 性能监控：记录开始时间
     start_time = time.time()
     
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-    
+    client = get_llm_client(api_key, base_url)
+
     messages = []
     if system_prompt:
         # ── DS-V3 兼容：将 [n] 注入 chunk content 开头 ──
@@ -446,8 +547,8 @@ async def _embed_batch_fallback(client, batch_texts: list[str], model_name: str)
 
 
 async def bailian_embedding(texts: list[str]) -> np.ndarray:
-    api_key = os.environ.get("ALI_API_KEY")
-    base_url = os.environ.get("ALI_BASE_URL")
+    api_key = _DASHSCOPE_API_KEY
+    base_url = _DASHSCOPE_BASE_URL
     
     # ✅ 强制从环境变量读取 Embedding 模型（无默认值）
     model_name = os.environ.get("EMBEDDING_MODEL")
@@ -536,11 +637,12 @@ def get_rag_engine():
         # 🔄 Rerank：用阿里云 qwen3-rerank 对检索结果重排序，高分 chunk 排前面
         rerank_model_func=partial(
             _logged_rerank,
-            api_key=os.environ.get("ALI_API_KEY"),
+            api_key=_DASHSCOPE_API_KEY,
             model=_RERANK_MODEL,
             base_url=_RERANK_BASE_URL,
         ),
-        min_rerank_score=0.37,  # 丢弃 Rerank 分数 < 0.37 的低相关 chunk
+        min_rerank_score=float(os.environ.get("MIN_RERANK_SCORE", 0.25)),  # 丢弃 Rerank 分数低于此阈值的 chunk
+        related_chunk_number=int(os.environ.get("RELATED_CHUNK_NUMBER", 5)),  # 图谱路径每实体均摊目标 chunk 数
     )
     return rag
 
@@ -598,11 +700,12 @@ def _create_engine_for_workspace(workspace: str) -> LightRAG:
         ),
         rerank_model_func=partial(
             _logged_rerank,
-            api_key=os.environ.get("ALI_API_KEY"),
+            api_key=_DASHSCOPE_API_KEY,
             model=_RERANK_MODEL,
             base_url=_RERANK_BASE_URL,
         ),
-        min_rerank_score=0.37,
+        min_rerank_score=float(os.environ.get("MIN_RERANK_SCORE", 0.25)),
+        related_chunk_number=int(os.environ.get("RELATED_CHUNK_NUMBER", 5)),  # 图谱路径每实体均摊目标 chunk 数
     )
 
 

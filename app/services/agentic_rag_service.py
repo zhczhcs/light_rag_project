@@ -11,7 +11,9 @@ HyDE: 假设文档生成 + 向量检索增强
 import os
 import re
 import time
+import json
 from openai import AsyncOpenAI
+from app.core.llm_client import get_llm_client
 from app.utils.table_printer import print_kv_table, print_simple_table
 
 
@@ -34,7 +36,7 @@ class QueryResolver:
             base_url = os.environ.get("ALI_BASE_URL")
             if not api_key or not base_url:
                 raise ValueError("ALI_API_KEY or ALI_BASE_URL not configured")
-            self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+            self._client = get_llm_client(api_key, base_url)
         return self._client
 
     async def resolve(
@@ -45,12 +47,7 @@ class QueryResolver:
         if not query or not query.strip():
             return {"resolved_query": query, "was_rewritten": False, "reason": "empty query"}
 
-        if not conversation_history:
-            return {"resolved_query": query, "was_rewritten": False, "reason": "no history"}
-
-        recent_history = self._extract_recent_turns(conversation_history, max_turns=3)
-        if not recent_history:
-            return {"resolved_query": query, "was_rewritten": False, "reason": "no valid history"}
+        recent_history = self._extract_recent_turns(conversation_history, max_turns=3) if conversation_history else []
 
         prompt = self._build_prompt(query, recent_history)
 
@@ -102,17 +99,26 @@ class QueryResolver:
             for msg in history
         )
 
-        prompt = f"""You are a query resolution expert. The user's latest query may contain pronouns (that, this, it, he, just now, before, etc.), omissions, or ambiguity.
+        prompt = f"""You are a query resolution expert. The user's latest query may contain pronouns (that, this, it, he, just now, before, etc.), omissions, or ambiguity. It may also be a complex query covering multiple aspects or a sequence of entities.
 
-[Criteria]
-- If query contains "that" "this" "it" "he" "just now" "before" "the above" "what you said" etc. -> rewrite needed
-- If query is a short response ("right" "correct" "then what" "how to solve" "why") and depends on context -> rewrite needed
-- If query itself is complete and clear -> no rewrite needed
+[Task 1: Query Resolution]
+Based on the conversation history, determine if the query needs rewriting to resolve pronouns/omissions.
+- If needed: output the rewritten standalone query.
+- If not needed: keep the original text.
 
-[Task]
-Based on the conversation history below, determine if the user's latest query needs rewriting.
-If needed, output the rewritten complete query (understandable without history).
-If not needed, output the original text unchanged.
+[Task 2: Query Decomposition]
+Analyze if the query involves one of the following patterns:
+- Sequence: "from A to B evolution/development", "history of X", "how X developed"
+- Multi-aspect: "why X in both Y and Z", "X's role in A and B", "X is both P and Q"
+- Comparison: "compare A and B", "differences between A and B"
+
+If YES, decompose into 2-4 sub-queries following these CRITICAL rules:
+1. Each sub-query MUST target a DIFFERENT specific entity, aspect, or time period (NO overlap)
+2. For sequence questions, you MUST enumerate EVERY intermediate step (e.g., "from A to D" requires sub-queries for A, B, C, D - do NOT skip B or C)
+3. Each sub-query MUST be independently searchable (contain complete context, no pronouns)
+4. Sub-queries should NOT repeat the main query's overall question
+
+If NO, leave sub-queries empty.
 
 [Conversation History]
 {history_text}
@@ -120,38 +126,73 @@ If not needed, output the original text unchanged.
 [User's Latest Query]
 {query}
 
-[Output Rules]
-- If rewriting needed: output rewritten query text directly, no quotes, no explanation
-- If no rewrite needed: output original text exactly as-is
-- Absolutely do NOT output "no rewrite needed" "original is" etc.
+[Output Format] (strictly follow)
+Resolved: <resolved query text>
+SubQueries:
+- <sub-query 1 if needed>
+- <sub-query 2 if needed>
+- <sub-query 3 if needed>
+- <sub-query 4 if needed>
+
+[Rules]
+- If no sub-queries needed, write "SubQueries:" followed by nothing (or "None")
+- Do NOT output explanations, notes, or quotes around the text
+- Keep sub-queries concise (under 30 words each)
+- CRITICAL: Ensure sub-queries are mutually exclusive and collectively exhaustive
 """
         return prompt
 
     def _parse_result(self, original_query: str, resolved: str) -> dict:
-        cleaned = resolved.strip().strip('"').strip("'").strip()
+        text = resolved.strip()
+
+        # Extract Resolved: block
+        resolved_query = original_query
+        sub_queries = []
+
+        # Try to parse structured format (Resolved: ... SubQueries: ...)
+        resolved_match = re.search(r"Resolved:\s*(.+?)(?=\nSubQueries:|$)", text, re.DOTALL | re.IGNORECASE)
+        if resolved_match:
+            resolved_query = resolved_match.group(1).strip()
+
+            # Extract SubQueries list
+            sub_match = re.search(r"SubQueries:\s*(.*)", text, re.DOTALL | re.IGNORECASE)
+            if sub_match:
+                sub_block = sub_match.group(1).strip()
+                if sub_block and not sub_block.lower().startswith("none"):
+                    # Parse bullet list
+                    for line in sub_block.split("\n"):
+                        line = line.strip()
+                        if line.startswith("-") or line.startswith("*"):
+                            sq = line[1:].strip()
+                            if sq:
+                                sub_queries.append(sq)
+                        elif line and not line.lower().startswith("subqueries"):
+                            # Handle cases where bullets are missing
+                            sub_queries.append(line)
 
         def _normalize(text: str) -> str:
             return re.sub(r"[\s，。！？、；：\"'']", "", text).lower()
 
-        if _normalize(cleaned) == _normalize(original_query.strip()):
-            return {
-                "resolved_query": original_query,
-                "was_rewritten": False,
-                "reason": "no rewrite needed",
-            }
+        # Fallback: if no structured format detected, treat entire response as resolved query
+        if not resolved_match:
+            cleaned = text.strip('"').strip("'").strip()
+            no_rewrite_signals = ["no rewrite needed", "no need to rewrite", "original text", "original query", "无需改写", "不需要改写", "原文如下"]
+            if any(s in cleaned for s in no_rewrite_signals):
+                return {
+                    "resolved_query": original_query,
+                    "was_rewritten": False,
+                    "reason": "LLM judged no rewrite needed",
+                    "sub_queries": [],
+                }
+            resolved_query = cleaned
 
-        no_rewrite_signals = ["no rewrite needed", "no need to rewrite", "original text", "original query", "无需改写", "不需要改写", "原文如下"]
-        if any(s in cleaned for s in no_rewrite_signals):
-            return {
-                "resolved_query": original_query,
-                "was_rewritten": False,
-                "reason": "LLM judged no rewrite needed",
-            }
+        was_rewritten = _normalize(resolved_query) != _normalize(original_query.strip())
 
         return {
-            "resolved_query": cleaned,
-            "was_rewritten": True,
-            "reason": "pronoun resolution/query rewrite",
+            "resolved_query": resolved_query,
+            "was_rewritten": was_rewritten,
+            "reason": "pronoun resolution/query rewrite + decomposition" if sub_queries else ("pronoun resolution/query rewrite" if was_rewritten else "no rewrite needed"),
+            "sub_queries": sub_queries,
         }
 
 
@@ -175,7 +216,7 @@ class RetrievalGrader:
             base_url = os.environ.get("ALI_BASE_URL")
             if not api_key or not base_url:
                 raise ValueError("ALI_API_KEY or ALI_BASE_URL not configured")
-            self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+            self._client = get_llm_client(api_key, base_url)
         return self._client
 
     async def grade(self, query: str, chunks: list[dict]) -> dict:
@@ -278,7 +319,7 @@ class QueryRewriter:
             base_url = os.environ.get("ALI_BASE_URL")
             if not api_key or not base_url:
                 raise ValueError("ALI_API_KEY or ALI_BASE_URL not configured")
-            self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+            self._client = get_llm_client(api_key, base_url)
         return self._client
 
     async def rewrite(
@@ -362,7 +403,7 @@ class HyDEGenerator:
             base_url = os.environ.get("ALI_BASE_URL")
             if not api_key or not base_url:
                 raise ValueError("ALI_API_KEY or ALI_BASE_URL not configured")
-            self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+            self._client = get_llm_client(api_key, base_url)
         return self._client
 
     async def generate(self, query: str) -> str:
@@ -427,6 +468,77 @@ class HyDEGenerator:
 # AgenticOrchestrator — 编排器（Phase 1+2+HyDE）
 # ============================================================
 
+class _ChunkNeighborExpander:
+    """相邻 chunk 扩展器：根据 chunk_order_index 扩展前后邻居"""
+
+    def __init__(self, workspace: str):
+        self.workspace = workspace
+        self._index = None
+        self._loaded = False
+
+    def _load_index(self):
+        if self._loaded:
+            return
+        self._loaded = True
+        if not self.workspace:
+            return
+
+        # 计算项目根目录（agentic_rag_service.py 位于 app/services/）
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        kv_path = os.path.join(base_dir, "data", self.workspace, "kv_store_text_chunks.json")
+        if not os.path.exists(kv_path):
+            return
+
+        try:
+            with open(kv_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self._index = {}
+            for chunk_id, chunk in data.items():
+                doc_id = chunk.get("full_doc_id")
+                order_idx = chunk.get("chunk_order_index")
+                if doc_id is not None and order_idx is not None:
+                    self._index[(doc_id, order_idx)] = chunk
+        except Exception as e:
+            print(f"[WARN] [NeighborExpander] 加载 chunk 索引失败: {e}")
+
+    def expand(self, chunks: list[dict], max_neighbors: int = 1) -> list[dict]:
+        self._load_index()
+        if not self._index or not chunks:
+            return chunks
+
+        existing_keys = set()
+        for chunk in chunks:
+            doc_id = chunk.get("full_doc_id")
+            order_idx = chunk.get("chunk_order_index")
+            if doc_id is not None and order_idx is not None:
+                existing_keys.add((doc_id, order_idx))
+
+        neighbor_chunks = []
+        for chunk in chunks:
+            doc_id = chunk.get("full_doc_id")
+            order_idx = chunk.get("chunk_order_index")
+            if doc_id is None or order_idx is None:
+                continue
+            for delta in range(-max_neighbors, max_neighbors + 1):
+                if delta == 0:
+                    continue
+                neighbor_key = (doc_id, order_idx + delta)
+                if neighbor_key in self._index and neighbor_key not in existing_keys:
+                    neighbor = self._index[neighbor_key]
+                    neighbor_chunks.append({
+                        "content": neighbor.get("content", ""),
+                        "full_doc_id": neighbor.get("full_doc_id", ""),
+                        "file_path": neighbor.get("file_path", ""),
+                        "chunk_order_index": neighbor.get("chunk_order_index", 0),
+                    })
+                    existing_keys.add(neighbor_key)
+
+        if neighbor_chunks:
+            print(f"[NeighborExpander] 扩展 {len(neighbor_chunks)} 个相邻 chunks")
+            return chunks + neighbor_chunks
+        return chunks
+
+
 class AgenticOrchestrator:
     """
     Agentic RAG 编排器。
@@ -434,11 +546,13 @@ class AgenticOrchestrator:
     Phase 2: RetrievalGrader（检索评分）+ QueryRewriter（查询重写）
     """
 
-    def __init__(self, max_retries: int = 1):
+    def __init__(self, max_retries: int = None):
         self.resolver = QueryResolver()
         self.grader = RetrievalGrader()
         self.rewriter = QueryRewriter()
-        self.max_retries = max_retries
+        self.max_retries = max_retries if max_retries is not None else int(
+            os.environ.get("AGENTIC_MAX_RETRIES", "1")
+        )
 
     async def execute(
         self,
@@ -447,6 +561,7 @@ class AgenticOrchestrator:
         engine=None,
         param=None,
         use_hyde: bool = False,
+        workspace: str = None,
     ) -> dict:
         """
         执行完整的 Agentic RAG 流程。
@@ -493,6 +608,26 @@ class AgenticOrchestrator:
 
         resolved_query = resolver_result["resolved_query"]
         was_rewritten = resolver_result["was_rewritten"]
+        sub_queries = resolver_result.get("sub_queries", [])
+
+        # 查询分解：如有子查询，拼接到消解后查询以扩展语义覆盖
+        final_query_for_retrieval = resolved_query
+        if sub_queries:
+            final_query_for_retrieval = resolved_query + " " + " ".join(sub_queries)
+            metadata["steps"].append({
+                "step": "query_decomposition",
+                "sub_queries": sub_queries,
+                "combined_query": final_query_for_retrieval,
+            })
+            print_kv_table(
+                "🔀 QueryDecomposer",
+                {
+                    "消解后查询": resolved_query[:50] + ("..." if len(resolved_query) > 50 else ""),
+                    "子查询数量": str(len(sub_queries)),
+                    "拼接后查询": final_query_for_retrieval[:80] + ("..." if len(final_query_for_retrieval) > 80 else ""),
+                },
+                key_width=16, val_width=50,
+            )
 
         # Phase 1 汇总表格
         print_kv_table(
@@ -511,12 +646,12 @@ class AgenticOrchestrator:
         hyde_chunks_count = 0
         if use_hyde and engine and param:
             try:
-                print(f"[HyDE] 开始生成假设文档 (查询: '{resolved_query}')")
+                print(f"[HyDE] 开始生成假设文档 (查询: '{final_query_for_retrieval}')")
                 hyde_start = time.time()
 
                 # 1. 生成假设文档
                 hyde_generator = HyDEGenerator()
-                hyde_doc = await hyde_generator.generate(resolved_query)
+                hyde_doc = await hyde_generator.generate(final_query_for_retrieval)
 
                 if hyde_doc:
                     # 清理不可见字符，防止 Embedding API 拒绝
@@ -547,25 +682,9 @@ class AgenticOrchestrator:
                         hyde_results = []
 
                     if hyde_results:
-                        # 格式化 HyDE chunks 为文本
-                        hyde_texts = []
-                        seen_contents = set()
-                        for i, item in enumerate(hyde_results[:top_k], 1):
-                            content = item.get("content", "") if isinstance(item, dict) else str(item)
-                            # 简单去重
-                            content_key = content[:100] if len(content) > 100 else content
-                            if content_key in seen_contents:
-                                continue
-                            seen_contents.add(content_key)
-                            hyde_texts.append(f"[HyDE Document {i}]\n{content}")
-
-                        hyde_chunks_count = len(hyde_texts)
-                        if hyde_texts:
-                            hyde_context = "\n\n".join(hyde_texts)
-                            # 4. 注入到 param.user_prompt 中
-                            original_prompt = getattr(param, "user_prompt", "") or ""
-                            hyde_injection = f"\n\n---\n[HyDE 补充上下文] 以下文档片段基于用户问题生成的假设回答检索得到，可能包含额外相关信息：\n\n{hyde_context}\n---"
-                            param.user_prompt = original_prompt + hyde_injection
+                        # HyDE chunks 存到 param.hyde_extra_chunks，在 mix 模式 round-robin 时合并进 vector_chunks 参与 rerank
+                        param.hyde_extra_chunks = hyde_results[:top_k]
+                        hyde_chunks_count = len(param.hyde_extra_chunks)
                     else:
                         hyde_results = []
 
@@ -592,19 +711,76 @@ class AgenticOrchestrator:
                 hyde_chunks_count = 0
 
         # ========== Phase 2: Retrieve -> Grade -> Rewrite Loop ==========
-        final_query = resolved_query
+        final_query = final_query_for_retrieval
         final_result = None
         retries = 0
         graded = False
         grade_passed = True
 
         if engine and param:
+            # ===== 子查询独立检索 =====
+            # 如果有子查询，对每个子查询独立检索，然后合并结果
+            all_subquery_chunks = []
+            if sub_queries:
+                print(f"[Agentic] 子查询独立检索: {len(sub_queries)} 个子查询")
+                for idx, sq in enumerate(sub_queries, 1):
+                    print(f"[Agentic] 子查询 {idx}/{len(sub_queries)}: '{sq[:50]}...'")
+                    try:
+                        # 为子查询创建独立的 param 副本（避免 hyde_extra_chunks 污染）
+                        from copy import deepcopy
+                        sq_param = deepcopy(param)
+                        sq_param.hyde_extra_chunks = None  # 子查询不启用 HyDE，避免噪声
+                        sq_result = await engine.aquery_llm(sq, param=sq_param)
+                        sq_chunks = sq_result.get("data", {}).get("chunks", [])
+                        # 标记子查询来源
+                        for ch in sq_chunks:
+                            ch["_subquery_source"] = sq[:30]
+                        all_subquery_chunks.extend(sq_chunks)
+                        print(f"[Agentic] 子查询 {idx} 检索到 {len(sq_chunks)} 个 chunks")
+                    except Exception as e:
+                        print(f"[WARN] [Agentic] 子查询 {idx} 检索失败: {e}")
+
+                if all_subquery_chunks:
+                    # 去重：按 chunk_id 去重，保留第一个出现的
+                    seen_ids = set()
+                    unique_subquery_chunks = []
+                    for ch in all_subquery_chunks:
+                        cid = ch.get("chunk_id") or ch.get("id")
+                        if cid and cid not in seen_ids:
+                            seen_ids.add(cid)
+                            unique_subquery_chunks.append(ch)
+                        elif not cid:
+                            unique_subquery_chunks.append(ch)
+                    print(f"[Agentic] 子查询合并去重后: {len(unique_subquery_chunks)} 个 chunks (原始 {len(all_subquery_chunks)})")
+                    metadata["steps"].append({
+                        "step": "subquery_retrieval",
+                        "subquery_count": len(sub_queries),
+                        "total_chunks_before_dedup": len(all_subquery_chunks),
+                        "total_chunks_after_dedup": len(unique_subquery_chunks),
+                    })
+
             for attempt in range(self.max_retries + 1):
                 print(f"[Agentic] Retrieval attempt {attempt + 1}/{self.max_retries + 1}")
 
-                # 调用 LightRAG 检索+生成
+                # 调用 LightRAG 检索+生成（主查询）
                 result = await engine.aquery_llm(final_query, param=param)
                 final_result = result
+
+                # 如果有子查询结果，合并到主查询结果中
+                if sub_queries and unique_subquery_chunks:
+                    main_chunks = result.get("data", {}).get("chunks", [])
+                    # 合并：子查询 chunks 放在前面（更相关），然后主查询 chunks
+                    combined_chunks = unique_subquery_chunks[:]
+                    main_seen = set(ch.get("chunk_id") or ch.get("id") for ch in unique_subquery_chunks)
+                    for ch in main_chunks:
+                        cid = ch.get("chunk_id") or ch.get("id")
+                        if cid not in main_seen:
+                            combined_chunks.append(ch)
+                    # 更新 result 中的 chunks
+                    if "data" in result:
+                        result["data"]["chunks"] = combined_chunks
+                    final_result = result
+                    print(f"[Agentic] 主查询 {len(main_chunks)} + 子查询 {len(unique_subquery_chunks)} → 合并后 {len(combined_chunks)} 个 chunks")
 
                 # 提取 chunks
                 data = result.get("data", {})
@@ -673,6 +849,52 @@ class AgenticOrchestrator:
                 if grade_result["passed"]:
                     break
 
+                # ===== 相邻 chunk 扩展：Grader 不通过时，尝试扩展邻居重新评分 =====
+                neighbor_expander = _ChunkNeighborExpander(workspace)
+                expanded_chunks = neighbor_expander.expand(chunks, max_neighbors=1)
+                if len(expanded_chunks) > len(chunks):
+                    regrade_result = await self.grader.grade(final_query, expanded_chunks)
+                    if regrade_result["passed"]:
+                        grade_passed = True
+                        # 更新最终 result 中的 chunks 为扩展后版本
+                        if final_result and "data" in final_result:
+                            final_result["data"]["chunks"] = expanded_chunks
+                        metadata["steps"].append({
+                            "step": "neighbor_expansion",
+                            "original_chunks": len(chunks),
+                            "expanded_chunks": len(expanded_chunks),
+                            "regrade_passed": True,
+                            "attempt": attempt + 1,
+                        })
+                        print_kv_table(
+                            "🔗 Neighbor Chunk 扩展",
+                            {
+                                "验证结果": "✅ 通过",
+                                "原始 chunks": f"{len(chunks)} 个",
+                                "扩展后": f"{len(expanded_chunks)} 个",
+                            },
+                            key_width=16, val_width=50,
+                        )
+                        break
+                    else:
+                        metadata["steps"].append({
+                            "step": "neighbor_expansion",
+                            "original_chunks": len(chunks),
+                            "expanded_chunks": len(expanded_chunks),
+                            "regrade_passed": False,
+                            "attempt": attempt + 1,
+                        })
+                        print_kv_table(
+                            "🔗 Neighbor Chunk 扩展",
+                            {
+                                "验证结果": "❌ 未通过",
+                                "原始 chunks": f"{len(chunks)} 个",
+                                "扩展后": f"{len(expanded_chunks)} 个",
+                            },
+                            key_width=16, val_width=50,
+                        )
+                        # 扩展后仍不通过，继续走 Rewriter 流程
+
                 # 评分不通过 -> 尝试重写（如果还有重试次数）
                 if attempt < self.max_retries:
                     final_query = await self.rewriter.rewrite(
@@ -725,5 +947,6 @@ class AgenticOrchestrator:
             "use_hyde": use_hyde,
             "hyde_doc": hyde_doc,
             "hyde_chunks_count": hyde_chunks_count,
+            "sub_queries": sub_queries,
             "metadata": metadata,
         }
