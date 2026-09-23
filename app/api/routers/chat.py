@@ -10,6 +10,7 @@ from openai import AsyncOpenAI
 from sqlalchemy.orm import Session
 
 from app.rag.engine import QueryParam, get_user_engine, get_workspace_engine, reset_global_stats, get_global_stats, set_need_references_flag
+from app.core.llm_client import get_llm_client
 from app.schemas.models import ChatRequest
 from app.services.file_service import build_snippet_around_query
 from app.services.context_service import build_conversation_history_enhanced
@@ -48,7 +49,7 @@ async def extract_keywords_via_llm(query: str) -> tuple[list[str], bool, str, bo
     try:
         api_key = os.environ.get("ALI_API_KEY")
         base_url = os.environ.get("ALI_BASE_URL")
-        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        client = get_llm_client(api_key, base_url)
 
         prompt_lines = [
             "你是路由分类器。根据用户输入，输出一条指令。只输出指令，不要解释。",
@@ -257,7 +258,7 @@ async def chat_with_rag(
     print("⏱️ " + _elapsed() + " 💬 [Chat] 收到问题: " + query_text)
 
     extracted_keywords, use_bypass, complexity_level, use_hyde, need_references = await extract_keywords_via_llm(query_text)
-    query_mode = "bypass" if use_bypass else (request.mode or "hybrid")
+    query_mode = "bypass" if use_bypass else (request.mode or "mix")
     print("⏱️ " + _elapsed(), end=" ")
     print_kv_table(
         "🔑 Keywords: 分类完成",
@@ -373,10 +374,10 @@ async def chat_with_rag(
         _user_prompt = (
             "用中文回答。引用规则（必须严格遵守）：\n"
             "1. 正文中使用 [n] 标注引用，n 必须对应 Document Chunks 的 reference_id。\n"
-            "2. 严禁从 Knowledge Graph Data（Entity/Relationship）编造引用编号。"
-            "Knowledge Graph 信息仅供辅助理解，不能作为引用来源。\n"
+            "2. Knowledge Graph Data（Entity/Relationship）仅可使用其 source_refs 中给出的编号引用，"
+            "严禁编造引用编号。\n"
             "3. References 列表的条目必须使用 Reference Document List 中的真实文档名。\n"
-            "4. 如果某个观点不是直接来自 Document Chunks 的内容，不要加 [n] 标注。"
+            "4. 如果某个观点既没有 Document Chunks 证据，也没有 Knowledge Graph 的 source_refs 证据，不要加 [n] 标注。"
         )
 
         param = QueryParam(
@@ -408,13 +409,15 @@ async def chat_with_rag(
         if not use_bypass and request.session_id and conversation_history:
             try:
                 from app.services.agentic_rag_service import AgenticOrchestrator
-                orchestrator = AgenticOrchestrator(max_retries=1)
+                _max_retries = int(os.environ.get("AGENTIC_MAX_RETRIES", "1"))
+                orchestrator = AgenticOrchestrator(max_retries=_max_retries)
                 agentic_result = await orchestrator.execute(
                     user_query=query_text,
                     conversation_history=conversation_history,
                     engine=user_engine,
                     param=param,
                     use_hyde=use_hyde,
+                    workspace=get_user_workspace(current_user),
                 )
                 resolved_query = agentic_result["final_query"]
                 agentic_metadata = {
@@ -546,7 +549,7 @@ async def chat_with_rag(
                     print("⏱️ " + _elapsed() + " 🔄 [Fallback] 0 doc chunks, 绕过 LightRAG 受限回复, 直接调 LLM")
                     _fb_api_key = os.environ.get("ALI_API_KEY")
                     _fb_base_url = os.environ.get("ALI_BASE_URL")
-                    _fb_client = AsyncOpenAI(api_key=_fb_api_key, base_url=_fb_base_url)
+                    _fb_client = get_llm_client(_fb_api_key, _fb_base_url)
                     _fb_messages = [{"role": "system", "content": "你是一个知识渊博的AI助手，用中文回答用户的问题。"}]
                     if conversation_history:
                         _fb_messages.extend(conversation_history)
