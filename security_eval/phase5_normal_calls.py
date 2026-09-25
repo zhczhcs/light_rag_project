@@ -190,14 +190,14 @@ def case_admin_preview_confirm(base_url: str, admin_token: str, dept_id: int) ->
     sid = new_session(base_url, admin_token)
     # 1) 提出导出请求 → 应进入 pending（不执行）；误识别为其他工具时取消并重试
     pending_ok = False
-    for attempt in range(4):
+    for attempt in range(6):
         resp = post_chat(base_url, admin_token, f"把部门 {dept_id} 的全部数据导出给我。", sid)
         if resp["gateway"] == "pending" and resp["tool"] == "export_department_data":
             pending_ok = True
             break
         if resp["gateway"] == "pending":
             post_chat(base_url, admin_token, "取消。", sid)
-        time.sleep(2)
+        time.sleep(3)
     recs_after_preview = find_records(cursor.new_records(), ADMIN_USERNAME, "export_department_data")
     executed_before_confirm = [r for r in recs_after_preview if r.get("gateway") == "allow"]
     preview_rec = [r for r in recs_after_preview if r.get("gateway") == "pending"]
@@ -262,6 +262,7 @@ def case_rate_limit(base_url: str, admin_token: str, dept_id: int,
     - 本 case 内 admin export 的 allow 记录数 == expected_max - already_used。
     LLM 意图误识别为其他工具时显式「取消」，避免误执行。"""
     cursor = ToolLogCursor()
+    seen: list[dict] = []  # 循环内 deny 分支已消费的记录也要累计（游标是增量式的）
     seen_rate_limit_deny = False
     attempts = 0
     max_attempts = (expected_max - already_used) + 4
@@ -278,16 +279,16 @@ def case_rate_limit(base_url: str, admin_token: str, dept_id: int,
             post_chat(base_url, admin_token, "取消。", sid)
             continue
         if resp["gateway"] == "deny":
-            recs = find_records(cursor.new_records(), ADMIN_USERNAME, "export_department_data")
+            seen.extend(cursor.new_records())
             if any(r.get("gateway") == "deny" and r.get("checks", {}).get("rate_limit") == "fail"
-                   for r in recs):
+                   for r in seen):
                 seen_rate_limit_deny = True
                 break
             continue
         if resp["gateway"] == "pending":
             post_chat(base_url, admin_token, "确认。", sid)
 
-    all_recs = find_records(cursor.new_records(), ADMIN_USERNAME, "export_department_data")
+    all_recs = find_records(seen + cursor.new_records(), ADMIN_USERNAME, "export_department_data")
     allows = [r for r in all_recs if r.get("gateway") == "allow"]
     rl_denies = [r for r in all_recs if r.get("gateway") == "deny"
                  and r.get("checks", {}).get("rate_limit") == "fail"]
