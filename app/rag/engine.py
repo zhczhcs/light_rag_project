@@ -17,6 +17,7 @@ from lightrag.kg.shared_storage import _init_flags, _shared_dicts, get_final_nam
 from openai import AsyncOpenAI
 from app.core.globals import model_context, metrics_context  # ✅ 引入监控上下文
 from app.core.llm_client import get_llm_client
+from app.core.guard_service import guard_retrieval_context
 from app.utils.table_printer import print_kv_table, print_simple_table
 
 _QDRANT_HOST = os.environ.get("QDRANT_HOST")
@@ -430,6 +431,12 @@ async def bailian_llm(prompt, system_prompt=None, history_messages=[], **kwargs)
     if system_prompt:
         # ── DS-V3 兼容：将 [n] 注入 chunk content 开头 ──
         system_prompt = _inject_ref_ids_into_chunks(system_prompt)
+        # 🛡️ Phase 4 [D]: 检索内容防护 —— 对含检索内容的 RAG system prompt
+        #    显式标记"不可信数据"（数据/指令分离，同步 µs 级）；
+        #    注入检测为异步审计扫描（标记+记录策略，不门禁），命中写 scan_log.jsonl
+        system_prompt, _guard_retrieval = await guard_retrieval_context(system_prompt)
+        if _guard_retrieval.decision == "async_scan":
+            print("🛡️ [Guard] 检索上下文已打不可信标记, 异步注入扫描: " + _guard_retrieval.detail)
         messages.append({"role": "system", "content": system_prompt})
     if history_messages:
         messages.extend(history_messages)

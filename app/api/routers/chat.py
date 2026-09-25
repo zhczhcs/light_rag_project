@@ -18,12 +18,19 @@ from app.core import globals
 from app.utils.metrics import monitor
 from app.utils.table_printer import print_kv_table
 from app.core.security import get_current_user
+from app.core.guard_service import (
+    scan_user_input,
+    scan_response,
+    apply_output_sanitization,
+    record_citation_consistency,
+    INPUT_BLOCK_MESSAGE,
+)
 from app.database import UserModel, get_db, ChatSessionModel, ChatMessageModel, get_user_workspace
 
 
 # 临时日志过滤：只保留系统关键日志，其他 print 全部静音。
 # 恢复方式：删除本函数与下一行 print 绑定即可。
-_KEEP_PATTERNS = ("[Context", "[Keywords", "[Agentic", "[HyDE", "[Rerank", "[RefInject", "[Engine", "[TOOL-CALL]", "[MOCK-TOOL]")
+_KEEP_PATTERNS = ("[Context", "[Keywords", "[Agentic", "[HyDE", "[Rerank", "[RefInject", "[Engine", "[TOOL-CALL]", "[MOCK-TOOL]", "[Guard]")
 
 def _context_only_print(*args, **kwargs):
     msg = " ".join(str(a) for a in args)
@@ -249,6 +256,30 @@ async def chat_with_rag(
 
     session_id = "query_" + str(time.time())
     collector = monitor.create_collector(session_id)
+
+    # =========================================================
+    # 🛡️ Phase 4 [D]: 输入扫描（直接注入/越狱）—— 对话链路第一道确定性边界
+    #    规则层 + 中文 BERT 分类器，命中即拒绝；模型不可用 → fail-open 打标
+    #    （详见 app/core/guard_service.py 头注释的策略说明）
+    # =========================================================
+    _guard_input = await scan_user_input(query_text, context="chat")
+    if _guard_input.decision == "block":
+        print("🛡️ [Guard] 输入拦截: rules=" + str(_guard_input.rule_hits)
+              + " conf=" + str(_guard_input.model_conf))
+        _refusal = INPUT_BLOCK_MESSAGE
+
+        async def guard_refusal_generator():
+            try:
+                yield json.dumps({"type": "meta", "data": {"model": "guard", "mode": "guard_block"}}, ensure_ascii=False) + "\n"
+                yield json.dumps({"type": "content", "data": _refusal}, ensure_ascii=False) + "\n"
+                yield json.dumps({"type": "sources", "data": []}, ensure_ascii=False) + "\n"
+                yield json.dumps({"type": "done", "data": {"model": "guard", "tokens": 0}}, ensure_ascii=False) + "\n"
+            finally:
+                monitor.remove_collector(session_id)
+
+        return StreamingResponse(guard_refusal_generator(), media_type="application/x-ndjson")
+    elif _guard_input.fail_open:
+        print("🛡️ [Guard] 输入扫描 fail-open 放行（模型不可用，仅规则层生效）")
 
     total_start_time = time.time()
 
@@ -619,6 +650,21 @@ async def chat_with_rag(
                 collector.generation_time = time.time() - generation_start_time
                 print("⏱️ " + _elapsed() + " ✅ [Stream] 流式输出完成, 生成耗时 " + format(collector.generation_time, ".2f") + "s, 总字数 " + str(len(full_ai_response)))
 
+                # =========================================================
+                # 🛡️ Phase 4 [D]: 输出扫描（系统提示词泄露片段比对 + PII 脱敏）
+                #    泄露命中 → 整段替换为拦截话术；PII → 脱敏。
+                #    注意：流式内容已先发往客户端，此处通过 content_correction
+                #    事件下发修正（协议既有机制）；DB 中保存的是修正后版本。
+                # =========================================================
+                _out_guard = scan_response(full_ai_response)
+                if _out_guard.decision != "pass":
+                    print("🛡️ [Guard] 输出处理: decision=" + _out_guard.decision
+                          + " rules=" + str(_out_guard.rule_hits))
+                    _sanitized = apply_output_sanitization(full_ai_response, _out_guard)
+                    if _sanitized != full_ai_response:
+                        full_ai_response = _sanitized
+                        yield json.dumps({"type": "content_correction", "data": full_ai_response}, ensure_ascii=False) + "\n"
+
                 # 4. 引用过滤
                 # 注意：原始文档中可能包含 [3] 等学术引用标记，
                 # 这些会被正则误匹配。由于同一文档的多个 chunk 共享
@@ -629,6 +675,12 @@ async def chat_with_rag(
                     cited_ids = set(int(m) for m in re.findall(r'\[(\d+)\]', full_ai_response))
                     available_ref_ids = set(s["reference_id"] for s in sources)
                     valid_cited = cited_ids & available_ref_ids
+                    # 🛡️ Phase 4 [D]: 引用一致性记录（孤儿引用清理复用既有后处理链，只记结果）
+                    record_citation_consistency(
+                        cited_total=len(cited_ids), cited_valid=len(valid_cited),
+                        orphan_removed=len(cited_ids - valid_cited),
+                        session_ref=str(request.session_id or ""),
+                    )
 
                     # 如果 LLM 确实引用了某个文档，保留该文档的所有 chunks
                     if valid_cited:

@@ -13,6 +13,16 @@ from app.api.router_manager import register_dynamic_routes
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 系统正在启动...")
+    # 🛡️ Phase 4 [D]: 预热注入检测分类器（避免首个请求承担模型加载耗时）
+    try:
+        from app.core.guard_service import _CNInjectionClassifier
+        clf = _CNInjectionClassifier.get()
+        if clf.ok:
+            print("🛡️ [Guard] 注入检测分类器已预热 (中文 BERT, models/bert_cn_prompt_attack_detection)")
+        else:
+            print("🛡️ [Guard] 分类器未加载（fail-open 模式，仅规则层）: " + str(clf.error))
+    except Exception as e:  # noqa: BLE001
+        print("🛡️ [Guard] 分类器预热异常（fail-open）: " + str(e)[:120])
     await init_rag_engine()
     yield
     # _cleanup_tunnel()  # 已切换为直连，无需清理隧道
