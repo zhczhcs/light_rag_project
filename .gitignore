@@ -31,10 +31,13 @@ ENV/
 # Data & logs
 data/
 backups/
+models/
 *.log
 *.db
 *.sqlite
 security_eval/tool_calls.jsonl
+security_eval/scan_log.jsonl
+security_eval/scan_log_dev.jsonl
 
 # IDE
 .vscode/

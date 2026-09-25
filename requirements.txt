@@ -40,3 +40,11 @@ python-docx>=1.1.0           # docx：Word 解析（file_service.py）
 python-dotenv>=1.0.0         # celery_app.py 加载 .env
 numpy>=1.26.0
 networkx>=3.2.0              # cleanup_service.py 图谱清理
+
+# --- AI 安全扫描（Phase 4 [D]：app/core/guard_service.py）---
+# 首选 Meta PromptGuard 2-86M 因 HF 许可墙（gated model 401）不可拉取，
+# 按改造计划 §7 回退为 ModelScope bixuechao/bert_cn_prompt_attack_detection（中文 BERT），
+# 通过 transformers 本地加载 models/bert_cn_prompt_attack_detection（不入库）。
+# torch 请安装 CPU 版（本机 i5-1135G7）：pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.3.0                 # 分类器 CPU 推理
+transformers>=4.48.0         # AutoTokenizer/AutoModelForSequenceClassification
