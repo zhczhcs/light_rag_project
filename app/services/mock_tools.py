@@ -1,13 +1,15 @@
 """
-Mock 高风险工具（Phase 1：AI 安全改造的演示载体）
+Mock 高风险工具（Phase 1：AI 安全改造的演示载体；Phase 5：权限网关已上线）
 
 ⚠️ 安全约定：本模块所有工具均为 Mock 实现——只写审计日志并返回固定/echo 值，
    禁止产生任何真实副作用（不发邮件、不删文档、不导出数据）。
-   后续 Phase 5（任务包 E）将在 execute_mock_tool 的调用方
-   （app/services/tool_call_service.py 的 execute_tool_intent）插入权限网关。
 
-每个工具在 MOCK_TOOL_REGISTRY 中登记元数据：
-用途描述、风险等级、参数 JSON Schema——这是 Phase 5 工具注册表的最小雏形。
+Phase 5（任务包 E）：权限网关（app/services/tool_gateway.py）已插入在调用方
+execute_tool_intent() 处。所有 Mock 工具均为高风险、admin-only：
+普通成员经"角色×工具白名单"被确定性拦截；admin 走"预览→确认→执行"。
+
+每个工具在 MOCK_TOOL_REGISTRY 中登记元数据（Phase 5 升级后的完整注册表）：
+用途描述、风险等级、允许角色、参数 JSON Schema——网关的校验链全部以注册表为准。
 """
 
 import json
@@ -88,6 +90,7 @@ MOCK_TOOL_REGISTRY = {
     "send_email": {
         "func": mock_send_email,
         "risk_level": "high",
+        "allowed_roles": ["admin"],  # 数据外泄通道：仅系统管理员
         "description": "发送邮件（数据外泄通道）",
         "param_schema": {
             "type": "object",
@@ -102,6 +105,7 @@ MOCK_TOOL_REGISTRY = {
     "delete_document": {
         "func": mock_delete_document,
         "risk_level": "high",
+        "allowed_roles": ["admin"],  # 破坏知识库完整性：仅系统管理员
         "description": "删除知识库中的指定文档（破坏完整性）",
         "param_schema": {
             "type": "object",
@@ -114,6 +118,7 @@ MOCK_TOOL_REGISTRY = {
     "export_department_data": {
         "func": mock_export_department_data,
         "risk_level": "high",
+        "allowed_roles": ["admin"],  # 批量数据导出：仅系统管理员
         "description": "批量导出部门全部数据",
         "param_schema": {
             "type": "object",
@@ -126,28 +131,35 @@ MOCK_TOOL_REGISTRY = {
 }
 
 
-def execute_mock_tool(tool_name: str, params: dict, user_context: dict | None = None) -> dict:
+def record_tool_audit(record: dict) -> None:
+    """公开审计入口：权限网关（tool_gateway.py）写决策日志用同一管道。"""
+    _append_tool_log(record)
+
+
+def execute_mock_tool(tool_name: str, params: dict, user_context: dict | None = None,
+                      write_audit: bool = True) -> dict:
     """
     【单一执行点】所有 Mock 工具的唯一执行入口。
 
-    Phase 1（当前）：解析后直接执行，无网关。
-    Phase 5（任务包 E）：权限网关插入在调用方 execute_tool_intent() 处，
-    对 intent 做 身份/角色/参数校验/预览确认 后再进入本函数。
-
-    每次执行（无论成败）都会写入 security_eval/tool_calls.jsonl 审计日志。
+    Phase 1：解析后直接执行，无网关。
+    Phase 5（任务包 E）：权限网关（tool_gateway.py）已在调用方
+    execute_tool_intent() 处完成 身份/白名单/Schema/范围/限流/确认 校验，
+    放行后才进入本函数。网关调用时 write_audit=False——每个决策只写一条
+    审计记录（含 gateway 决策字段），避免重复记账。
     """
     entry = MOCK_TOOL_REGISTRY.get(tool_name)
     record = {
         "tool": tool_name,
         "params": params or {},
         "risk_level": entry["risk_level"] if entry else "unknown",
-        "gateway": "none",  # Phase 5 后由网关改写为 "allow"/"deny"+原因
+        "gateway": "none",  # 仅遗留的直接调用路径（网关上线前应已绝迹）
         "user": user_context or {},
     }
 
     if entry is None:
         record["result"] = {"status": "error", "detail": f"未知工具: {tool_name}"}
-        _append_tool_log(record)
+        if write_audit:
+            _append_tool_log(record)
         return record["result"]
 
     try:
@@ -162,5 +174,6 @@ def execute_mock_tool(tool_name: str, params: dict, user_context: dict | None = 
         record["result"] = {"status": "error", "detail": f"执行异常: {e}"}
         print(f"[MOCK-TOOL] [ERR] 工具执行异常: {tool_name} -> {e}")
 
-    _append_tool_log(record)
+    if write_audit:
+        _append_tool_log(record)
     return record["result"]
