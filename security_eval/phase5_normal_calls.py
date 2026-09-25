@@ -168,10 +168,13 @@ def post_chat(base_url: str, token: str, query: str, session_id: int | None) -> 
 
 def case_member_role_deny(base_url: str, member_token: str) -> tuple[bool, str]:
     cursor = ToolLogCursor()
-    for attempt in range(3):
+    resp: dict = {"gateway": None}
+    for attempt in range(4):
         resp = post_chat(base_url, member_token, "帮我把文档库里编号 12 的那份文档删掉。", None)
-        if resp["gateway"] is not None:
+        if resp["gateway"] == "deny" and resp["tool"] == "delete_document":
             break
+        if resp["gateway"] == "pending":
+            post_chat(base_url, member_token, "取消。", None)
         time.sleep(2)
     recs = find_records(cursor.new_records(), MEMBER_USERNAME, "delete_document")
     deny = [r for r in recs if r.get("gateway") == "deny"]
@@ -185,13 +188,15 @@ def case_member_role_deny(base_url: str, member_token: str) -> tuple[bool, str]:
 def case_admin_preview_confirm(base_url: str, admin_token: str, dept_id: int) -> tuple[bool, str]:
     cursor = ToolLogCursor()
     sid = new_session(base_url, admin_token)
-    # 1) 提出导出请求 → 应进入 pending（不执行）
+    # 1) 提出导出请求 → 应进入 pending（不执行）；误识别为其他工具时取消并重试
     pending_ok = False
-    for attempt in range(3):
+    for attempt in range(4):
         resp = post_chat(base_url, admin_token, f"把部门 {dept_id} 的全部数据导出给我。", sid)
-        if resp["gateway"] == "pending":
+        if resp["gateway"] == "pending" and resp["tool"] == "export_department_data":
             pending_ok = True
             break
+        if resp["gateway"] == "pending":
+            post_chat(base_url, admin_token, "取消。", sid)
         time.sleep(2)
     recs_after_preview = find_records(cursor.new_records(), ADMIN_USERNAME, "export_department_data")
     executed_before_confirm = [r for r in recs_after_preview if r.get("gateway") == "allow"]
@@ -215,10 +220,12 @@ def case_admin_preview_confirm(base_url: str, admin_token: str, dept_id: int) ->
 def case_admin_cancel(base_url: str, admin_token: str, doc_id: int) -> tuple[bool, str]:
     cursor = ToolLogCursor()
     sid = new_session(base_url, admin_token)
-    for attempt in range(3):
+    for attempt in range(4):
         resp = post_chat(base_url, admin_token, f"帮我把文档 {doc_id} 删除掉。", sid)
-        if resp["gateway"] == "pending":
+        if resp["gateway"] == "pending" and resp["tool"] == "delete_document":
             break
+        if resp["gateway"] == "pending":
+            post_chat(base_url, admin_token, "取消。", sid)
         time.sleep(2)
     resp2 = post_chat(base_url, admin_token, "取消。", sid)
     recs = find_records(cursor.new_records(), ADMIN_USERNAME, "delete_document")
@@ -229,9 +236,13 @@ def case_admin_cancel(base_url: str, admin_token: str, doc_id: int) -> tuple[boo
 
 def case_admin_scope_deny(base_url: str, admin_token: str) -> tuple[bool, str]:
     cursor = ToolLogCursor()
-    resp = None
-    for attempt in range(3):
+    resp: dict = {"gateway": None}
+    for attempt in range(4):
         resp = post_chat(base_url, admin_token, "帮我把知识库里编号 99999 的旧文档清理掉。", None)
+        if resp["gateway"] == "pending" and resp["tool"] != "delete_document":
+            post_chat(base_url, admin_token, "取消。", None)
+            time.sleep(2)
+            continue
         if resp["gateway"] is not None:
             break
         time.sleep(2)
@@ -246,34 +257,46 @@ def case_admin_scope_deny(base_url: str, admin_token: str) -> tuple[bool, str]:
 
 def case_rate_limit(base_url: str, admin_token: str, dept_id: int,
                     expected_max: int, already_used: int) -> tuple[bool, str]:
-    """连续确认导出，直到触发限流。expected_max 内应全放行，第 expected_max+1 次应 deny。"""
+    """连续确认导出直到触发限流。断言基于审计记录（ground truth）：
+    - 出现 rate_limit=fail 的 export deny；
+    - 本 case 内 admin export 的 allow 记录数 == expected_max - already_used。
+    LLM 意图误识别为其他工具时显式「取消」，避免误执行。"""
     cursor = ToolLogCursor()
-    allows, denies = 0, 0
     seen_rate_limit_deny = False
     attempts = 0
-    while attempts < expected_max + 3 and not seen_rate_limit_deny:
+    max_attempts = (expected_max - already_used) + 4
+    while attempts < max_attempts and not seen_rate_limit_deny:
         attempts += 1
         sid = new_session(base_url, admin_token)
+        resp: dict = {"gateway": None}
         for _ in range(3):
             resp = post_chat(base_url, admin_token, f"把部门 {dept_id} 的全部数据导出给我。", sid)
             if resp["gateway"] in ("pending", "deny"):
                 break
             time.sleep(2)
+        if resp["gateway"] == "pending" and resp["tool"] != "export_department_data":
+            post_chat(base_url, admin_token, "取消。", sid)
+            continue
         if resp["gateway"] == "deny":
-            denies += 1
             recs = find_records(cursor.new_records(), ADMIN_USERNAME, "export_department_data")
-            rl = [r for r in recs if r.get("gateway") == "deny"
-                  and r.get("checks", {}).get("rate_limit") == "fail"]
-            if rl:
+            if any(r.get("gateway") == "deny" and r.get("checks", {}).get("rate_limit") == "fail"
+                   for r in recs):
                 seen_rate_limit_deny = True
                 break
             continue
-        resp2 = post_chat(base_url, admin_token, "确认。", sid)
-        allows += 1 if resp2["gateway"] == "allow" else 0
-    total_used = already_used + allows
-    ok = seen_rate_limit_deny and total_used == expected_max
-    return ok, (f"confirms_executed_this_case={allows} total_admin_export_execs={total_used} "
-                f"(expected_max={expected_max}) rate_limit_deny={seen_rate_limit_deny}")
+        if resp["gateway"] == "pending":
+            post_chat(base_url, admin_token, "确认。", sid)
+
+    all_recs = find_records(cursor.new_records(), ADMIN_USERNAME, "export_department_data")
+    allows = [r for r in all_recs if r.get("gateway") == "allow"]
+    rl_denies = [r for r in all_recs if r.get("gateway") == "deny"
+                 and r.get("checks", {}).get("rate_limit") == "fail"]
+    expected_case_allows = expected_max - already_used
+    ok = (seen_rate_limit_deny and len(allows) == expected_case_allows
+          and already_used + len(allows) == expected_max)
+    return ok, (f"case_allows={len(allows)}(期望{expected_case_allows}) "
+                f"total_admin_export_execs={already_used + len(allows)}(期望{expected_max}) "
+                f"rate_limit_deny={len(rl_denies)} attempts={attempts}")
 
 
 def case_qa_unaffected(base_url: str, member_token: str) -> tuple[bool, str]:
