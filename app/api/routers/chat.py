@@ -23,7 +23,7 @@ from app.database import UserModel, get_db, ChatSessionModel, ChatMessageModel, 
 
 # 临时日志过滤：只保留系统关键日志，其他 print 全部静音。
 # 恢复方式：删除本函数与下一行 print 绑定即可。
-_KEEP_PATTERNS = ("[Context", "[Keywords", "[Agentic", "[HyDE", "[Rerank", "[RefInject", "[Engine", "[TOOL-CALL]", "[MOCK-TOOL]")
+_KEEP_PATTERNS = ("[Context", "[Keywords", "[Agentic", "[HyDE", "[Rerank", "[RefInject", "[Engine", "[TOOL-CALL]", "[MOCK-TOOL]", "[GATEWAY]")
 
 def _context_only_print(*args, **kwargs):
     msg = " ".join(str(a) for a in args)
@@ -313,35 +313,65 @@ async def chat_with_rag(
         print("⏱️ " + _elapsed() + " 📝 [Context] 历史上下文构建完成, " + str(len(conversation_history)) + " 条消息")
 
         # =========================================================
-        # 🛠️ Phase 1: LLM 工具调用链路（Mock 高风险工具，当前无网关、直接执行）
+        # 🛡️ Phase 5: LLM 工具调用链路 + 自研权限网关
+        #    确认往返优先：有待确认意图且用户回复「确认/取消」时，不再过 LLM 意图检测
+        #    （确认是确定性短语匹配，确认环节不引入模型随机性/注入面）。
         #    detect_tool_intent → parse_tool_intent（解析点）
-        #    → execute_tool_intent（执行点，Phase 5 网关插这里）
-        #    → mock_tools.execute_mock_tool（唯一执行入口 + JSONL 审计日志）
-        #    未检测到意图则完全走原有 RAG 流程，本块相当于旁路拦截层。
+        #    → execute_tool_intent → tool_gateway.gate_tool_call（身份→白名单→
+        #      Schema→租户范围→限流→高风险预览确认）→ execute_mock_tool（唯一执行入口）
+        #    meta 事件携带 gateway 决策（deny/pending/allow/cancelled），SSE 协议不变。
         # =========================================================
         from app.services.tool_call_service import (
             detect_tool_intent,
             execute_tool_intent,
-            build_tool_answer,
+            resolve_pending_confirmation,
+            build_gateway_answer,
         )
-        tool_intent = await detect_tool_intent(query_text, conversation_history)
-        if tool_intent:
-            _tc_user_context = {
-                "id": current_user.id,
-                "username": current_user.username,
-                "role": current_user.role,
-                "department_id": current_user.department_id,
+        _tc_user_context = {
+            "id": current_user.id,
+            "username": current_user.username,
+            "role": current_user.role,
+            "department_id": current_user.department_id,
+        }
+
+        _gateway_out = None
+        tool_intent = None
+        try:
+            _gateway_out = resolve_pending_confirmation(
+                query_text, user_context=_tc_user_context, session_id=request.session_id
+            )
+            if _gateway_out is None:
+                tool_intent = await detect_tool_intent(query_text, conversation_history)
+                if tool_intent:
+                    _gateway_out = execute_tool_intent(
+                        tool_intent, user_context=_tc_user_context, session_id=request.session_id
+                    )
+        except Exception as _gw_err:  # noqa: BLE001
+            # 网关/意图链路异常兜底：不让 /api/chat 500，以 error 决策走 SSE 回答
+            print("❌ [GATEWAY] 工具链路异常: " + str(_gw_err))
+            _gateway_out = {
+                "decision": "error",
+                "tool": (tool_intent or {}).get("tool") if isinstance(tool_intent, dict) else None,
+                "executed": False,
+                "confirmed": False,
+                "decision_reason": str(_gw_err),
             }
-            tool_result = execute_tool_intent(tool_intent, user_context=_tc_user_context)
-            tool_answer = build_tool_answer(tool_intent, tool_result)
-            print("⏱️ " + _elapsed() + " 🛠️ [TOOL-CALL] 工具已执行(无网关): " + tool_intent["tool"]
-                  + " → " + str(tool_result.get("status", "?")))
+
+        if _gateway_out is not None:
+            tool_answer = build_gateway_answer(_gateway_out)
+            _gw_decision = _gateway_out.get("decision", "?")
+            print("⏱️ " + _elapsed() + " 🛡️ [GATEWAY] 决策: " + _gw_decision
+                  + " tool=" + str(_gateway_out.get("tool"))
+                  + " user=" + str(current_user.username)
+                  + " executed=" + str(_gateway_out.get("executed")))
 
             async def tool_event_generator():
                 try:
                     yield json.dumps({
                         "type": "meta",
-                        "data": {"model": selected_model, "mode": "tool_call", "tool": tool_intent["tool"]},
+                        "data": {"model": selected_model, "mode": "tool_call",
+                                 "tool": _gateway_out.get("tool"),
+                                 "gateway": _gw_decision},
                     }, ensure_ascii=False) + "\n"
                     yield json.dumps({"type": "content", "data": tool_answer}, ensure_ascii=False) + "\n"
                     yield json.dumps({"type": "sources", "data": []}, ensure_ascii=False) + "\n"
