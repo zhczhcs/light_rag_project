@@ -1,0 +1,27 @@
+# Phase 6 [F] promptfoo redteam 配置：直接打加固后的 /api/chat
+# 运行（cwd = security_eval/promptfoo，便携 Node 22）：
+#   node <promptfoo>/dist/src/entrypoint.js redteam eval -c promptfooconfig.yaml -o redteam_results.json
+# 说明：
+# - 接口为 NDJSON 流，由 provider.mjs 收成文本；认证用评测账号登录拿 JWT（普通成员，攻击面真实）。
+# - 插件/策略 ID 以本机安装的 promptfoo 0.120.19 为准（plugins 命令 + dist 包内注册表核实）：
+#   prompt-injection / jailbreak 在本版本是 **strategy** 而非 plugin；
+#   plugin 侧对应选 prompt-extraction（系统提示词窃取）、pii（敏感信息）、rbac（越权访问）。
+description: SecureRAG Phase6 redteam (extraction / PII / RBAC × injection / jailbreak strategies)
+
+providers:
+  - id: file://provider.mjs
+
+prompts:
+  - '{{prompt}}'   # 生成的对抗探针原样作为用户 query 打入
+
+redteam:
+  plugins:
+    - id: prompt-extraction
+      numTests: 8
+    - id: pii
+      numTests: 8
+    - id: rbac
+      numTests: 8
+  strategies:
+    - id: prompt-injection
+    - id: jailbreak
