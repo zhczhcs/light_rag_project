@@ -1,0 +1,2158 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d13" for="edge" attr.name="truncate" attr.type="string"/>
+<key id="d12" for="edge" attr.name="created_at" attr.type="long"/>
+<key id="d11" for="edge" attr.name="file_path" attr.type="string"/>
+<key id="d10" for="edge" attr.name="source_id" attr.type="string"/>
+<key id="d9" for="edge" attr.name="keywords" attr.type="string"/>
+<key id="d8" for="edge" attr.name="description" attr.type="string"/>
+<key id="d7" for="edge" attr.name="weight" attr.type="double"/>
+<key id="d6" for="node" attr.name="truncate" attr.type="string"/>
+<key id="d5" for="node" attr.name="created_at" attr.type="long"/>
+<key id="d4" for="node" attr.name="file_path" attr.type="string"/>
+<key id="d3" for="node" attr.name="source_id" attr.type="string"/>
+<key id="d2" for="node" attr.name="description" attr.type="string"/>
+<key id="d1" for="node" attr.name="entity_type" attr.type="string"/>
+<key id="d0" for="node" attr.name="entity_id" attr.type="string"/>
+<graph edgedefault="undirected"><node id="高阶成语词典">
+  <data key="d0">高阶成语词典</data>
+  <data key="d1">content</data>
+  <data key="d2">High-Level Idiom Dictionary is a reference book containing selected idioms and their explanations.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957318</data>
+  <data key="d6"></data>
+</node>
+<node id="虚与委蛇">
+  <data key="d0">虚与委蛇</data>
+  <data key="d1">concept</data>
+  <data key="d2">Xu Yu Wei Yi is an idiom meaning to be insincere and superficial in dealing with people.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957318</data>
+  <data key="d6"></data>
+</node>
+<node id="颐指气使">
+  <data key="d0">颐指气使</data>
+  <data key="d1">concept</data>
+  <data key="d2">Yi Zhi Qi Shi is an idiom describing someone who commands others with facial expressions, showing arrogance.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957318</data>
+  <data key="d6"></data>
+</node>
+<node id="刚愎自用">
+  <data key="d0">刚愎自用</data>
+  <data key="d1">concept</data>
+  <data key="d2">Gang Bi Zi Yong is an idiom referring to someone who is stubborn and refuses to listen to others.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957318</data>
+  <data key="d6"></data>
+</node>
+<node id="韬光养晦">
+  <data key="d0">韬光养晦</data>
+  <data key="d1">concept</data>
+  <data key="d2">Tao Guang Yang Hui is an idiom meaning to conceal one's talents and wait for the right moment.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957318</data>
+  <data key="d6"></data>
+</node>
+<node id="如履薄冰">
+  <data key="d0">如履薄冰</data>
+  <data key="d1">concept</data>
+  <data key="d2">Ru Lü Bo Bing is an idiom describing a situation where one must be extremely cautious.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957318</data>
+  <data key="d6"></data>
+</node>
+<node id="讳莫如深">
+  <data key="d0">讳莫如深</data>
+  <data key="d1">concept</data>
+  <data key="d2">Hui Mo Ru Shen is an idiom meaning to keep something secret and not reveal it.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957318</data>
+  <data key="d6"></data>
+</node>
+<node id="越俎代庖">
+  <data key="d0">越俎代庖</data>
+  <data key="d1">concept</data>
+  <data key="d2">Yue Zu Dai Pao is an idiom meaning to overstep one's duties and take over someone else's responsibilities.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957318</data>
+  <data key="d6"></data>
+</node>
+<node id="暴殄天物">
+  <data key="d0">暴殄天物</data>
+  <data key="d1">concept</data>
+  <data key="d2">Bao Tian Tian Wu is an idiom referring to the wasteful destruction of natural resources or valuable items.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957319</data>
+  <data key="d6"></data>
+</node>
+<node id="趋之若鹜">
+  <data key="d0">趋之若鹜</data>
+  <data key="d1">concept</data>
+  <data key="d2">Qu Zhi Ru Wu is an idiom describing people rushing after something, often something undesirable.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957319</data>
+  <data key="d6"></data>
+</node>
+<node id="怙恶不悛">
+  <data key="d0">怙恶不悛</data>
+  <data key="d1">concept</data>
+  <data key="d2">Hu E Bu Quan is an idiom describing someone who persists in wrongdoing and refuses to change.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957319</data>
+  <data key="d6"></data>
+</node>
+<node id="差强人意">
+  <data key="d0">差强人意</data>
+  <data key="d1">concept</data>
+  <data key="d2">Cha Qiang Ren Yi is an idiom meaning that something is somewhat satisfactory, though not perfect.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957319</data>
+  <data key="d6"></data>
+</node>
+<node id="空穴来风">
+  <data key="d0">空穴来风</data>
+  <data key="d1">concept</data>
+  <data key="d2">Kong Xue Lai Feng is an idiom meaning that there is always some basis for rumors or news.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957319</data>
+  <data key="d6"></data>
+</node>
+<node id="炙手可热">
+  <data key="d0">炙手可热</data>
+  <data key="d1">concept</data>
+  <data key="d2">Zhi Shou Ke Re is an idiom describing someone with great power and influence.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957319</data>
+  <data key="d6"></data>
+</node>
+<node id="不刊之论">
+  <data key="d0">不刊之论</data>
+  <data key="d1">concept</data>
+  <data key="d2">Bu Kan Zhi Lun is an idiom referring to an unchangeable and irrefutable statement.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957319</data>
+  <data key="d6"></data>
+</node>
+<node id="文不加点">
+  <data key="d0">文不加点</data>
+  <data key="d1">concept</data>
+  <data key="d2">Wen Bu Jia Dian is an idiom describing a well-written article that requires no revisions.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957319</data>
+  <data key="d6"></data>
+</node>
+<node id="首鼠两端">
+  <data key="d0">首鼠两端</data>
+  <data key="d1">concept</data>
+  <data key="d2">Shou Shu Liang Duan is an idiom describing someone who hesitates between two choices.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957320</data>
+  <data key="d6"></data>
+</node>
+<node id="不足为训">
+  <data key="d0">不足为训</data>
+  <data key="d1">concept</data>
+  <data key="d2">Bu Zu Wei Xun is an idiom meaning something is not worth following as an example.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957320</data>
+  <data key="d6"></data>
+</node>
+<node id="侧目而视">
+  <data key="d0">侧目而视</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom meaning to look at someone sideways, showing fear and resentment, often misused as "disregard" or "attention".&lt;SEP&gt;Ce Mu Er Shi is an idiom describing someone looking at another with suspicion or resentment.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a&lt;SEP&gt;chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957320</data>
+  <data key="d6"></data>
+</node>
+<node id="望其项背">
+  <data key="d0">望其项背</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom meaning to be able to see someone's back, indicating being able to catch up or match someone, usually used in negative contexts.&lt;SEP&gt;Wang Qi Xiang Bei is an idiom meaning to be able to catch up with someone.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a&lt;SEP&gt;chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957320</data>
+  <data key="d6"></data>
+</node>
+<node id="第一组">
+  <data key="d0">第一组</data>
+  <data key="d1">category</data>
+  <data key="d2">First Group refers to the first set of idioms in the dictionary, focusing on expressions related to behavior and attitude.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957320</data>
+  <data key="d6"></data>
+</node>
+<node id="第二组">
+  <data key="d0">第二组</data>
+  <data key="d1">category</data>
+  <data key="d2">Second Group refers to the second set of idioms in the dictionary, focusing on commonly misused idioms.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957320</data>
+  <data key="d6"></data>
+</node>
+<node id="Selected Idioms Dictionary">
+  <data key="d0">Selected Idioms Dictionary</data>
+  <data key="d1">content</data>
+  <data key="d2">Selected Idioms Dictionary is a reference book containing selected idioms and their explanations.</data>
+  <data key="d3">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957320</data>
+  <data key="d6"></data>
+</node>
+<node id="震聋发聩">
+  <data key="d0">震聋发聩</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom meaning to awaken the deaf, used metaphorically to describe the power of words or language to rouse the ignorant or apathetic.</data>
+  <data key="d3">chunk-bb3a0b9bcd470948b81699fc1d7298f0</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957320</data>
+  <data key="d6"></data>
+</node>
+<node id="鞭辟入里">
+  <data key="d0">鞭辟入里</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing scholarly work that is thorough and precise, or analysis that is accurate and hits the core issue.&lt;SEP&gt;A Chinese idiom describing analysis or argument that penetrates to the core or essence of a matter.</data>
+  <data key="d3">chunk-bb3a0b9bcd470948b81699fc1d7298f0&lt;SEP&gt;chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957321</data>
+  <data key="d6"></data>
+</node>
+<node id="高屋建瓴">
+  <data key="d0">高屋建瓴</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom symbolizing a commanding position or an unstoppable situation, like pouring water from a high roof.</data>
+  <data key="d3">chunk-bb3a0b9bcd470948b81699fc1d7298f0</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957321</data>
+  <data key="d6"></data>
+</node>
+<node id="擢发难数">
+  <data key="d0">擢发难数</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom meaning so many crimes that even pulling out one's hair would not be enough to count them.</data>
+  <data key="d3">chunk-bb3a0b9bcd470948b81699fc1d7298f0</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957321</data>
+  <data key="d6"></data>
+</node>
+<node id="沆瀣一气">
+  <data key="d0">沆瀣一气</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing people with similar interests or morals who group together, often in a negative sense.</data>
+  <data key="d3">chunk-bb3a0b9bcd470948b81699fc1d7298f0</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957321</data>
+  <data key="d6"></data>
+</node>
+<node id="拾人牙慧">
+  <data key="d0">拾人牙慧</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom referring to someone who repeats others' words or ideas as if they were their own, implying plagiarism or lack of originality.</data>
+  <data key="d3">chunk-bb3a0b9bcd470948b81699fc1d7298f0</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957321</data>
+  <data key="d6"></data>
+</node>
+<node id="登堂入室">
+  <data key="d0">登堂入室</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom meaning to enter the hall and room, symbolizing reaching a high level in learning or skill.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957321</data>
+  <data key="d6"></data>
+</node>
+<node id="沧海桑田">
+  <data key="d0">沧海桑田</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing great changes in the world, from sea to mulberry fields and back.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957321</data>
+  <data key="d6"></data>
+</node>
+<node id="白云苍狗">
+  <data key="d0">白云苍狗</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom comparing clouds to white clothes and then to gray dogs, symbolizing the ever-changing nature of the world.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957321</data>
+  <data key="d6"></data>
+</node>
+<node id="筚路蓝缕">
+  <data key="d0">筚路蓝缕</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing the hardships of pioneering, using a cart made of firewood and wearing ragged clothes.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="栉风沐雨">
+  <data key="d0">栉风沐雨</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing hardship and exposure to wind and rain, often used to describe hard work.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="间不容发">
+  <data key="d0">间不容发</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom meaning there is no room for a hair, indicating an extremely urgent situation.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="甚嚣尘上">
+  <data key="d0">甚嚣尘上</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom originally describing a busy military state, now used to describe loud and arrogant speech.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="如火如荼">
+  <data key="d0">如火如荼</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom comparing something to red fire and white grass, used to describe intense, passionate, or fierce situations.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="泾渭分明">
+  <data key="d0">泾渭分明</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom comparing the clear and muddy rivers, symbolizing clear boundaries or distinct differences.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="分庭抗礼">
+  <data key="d0">分庭抗礼</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing equal standing between two parties, often used to indicate mutual respect or equality.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="管鲍之交">
+  <data key="d0">管鲍之交</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom referring to the deep friendship between Guan Zhong and Bao Shuya during the Spring and Autumn period.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="韦编三绝">
+  <data key="d0">韦编三绝</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing Confucius' dedication to reading, with the leather straps of bamboo slips breaking three times.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="洛阳纸贵">
+  <data key="d0">洛阳纸贵</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing the popularity of a literary work, leading to increased paper prices due to widespread copying.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="汗牛充栋">
+  <data key="d0">汗牛充栋</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing an enormous collection of books, so many that oxen sweat and the house is full.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="诘屈聱牙">
+  <data key="d0">诘屈聱牙</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing writing that is difficult to read, with awkward phrasing.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="振聋发聩">
+  <data key="d0">振聋发聩</data>
+  <data key="d1">concept</data>
+  <data key="d2">A Chinese idiom describing words or actions that awaken the ignorant or indifferent.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="拼音">
+  <data key="d0">拼音</data>
+  <data key="d1">concept</data>
+  <data key="d2">The phonetic transcription of Chinese idioms, used to indicate how the idiom is pronounced.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="释义">
+  <data key="d0">释义</data>
+  <data key="d1">concept</data>
+  <data key="d2">The explanation or meaning of a Chinese idiom, providing its definition and usage context.</data>
+  <data key="d3">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d4">40个高级成语.txt</data>
+  <data key="d5">1770957322</data>
+  <data key="d6"></data>
+</node>
+<node id="Semiconductor">
+  <data key="d0">Semiconductor</data>
+  <data key="d1">concept</data>
+  <data key="d2">A material with electrical conductivity between that of a conductor and an insulator, widely used in electronics such as computers, mobile phones, and digital recorders. Common semiconductor materials include silicon, germanium, and gallium arsenide.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982430</data>
+  <data key="d6"></data>
+</node>
+<node id="Valence Band">
+  <data key="d0">Valence Band</data>
+  <data key="d1">concept</data>
+  <data key="d2">The energy band in a semiconductor that is filled with electrons at absolute zero temperature.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982430</data>
+  <data key="d6"></data>
+</node>
+<node id="Conduction Band">
+  <data key="d0">Conduction Band</data>
+  <data key="d1">concept</data>
+  <data key="d2">The energy band in a semiconductor where electrons can move freely and conduct electricity.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982430</data>
+  <data key="d6"></data>
+</node>
+<node id="Band Gap">
+  <data key="d0">Band Gap</data>
+  <data key="d1">concept</data>
+  <data key="d2">The energy gap between the valence band and the conduction band in a semiconductor.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982430</data>
+  <data key="d6"></data>
+</node>
+<node id="Intrinsic Semiconductor">
+  <data key="d0">Intrinsic Semiconductor</data>
+  <data key="d1">concept</data>
+  <data key="d2">A pure semiconductor crystal without any impurities or lattice defects, which behaves as an insulator at absolute zero and its conductivity increases with temperature.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982430</data>
+  <data key="d6"></data>
+</node>
+<node id="Doping">
+  <data key="d0">Doping</data>
+  <data key="d1">method</data>
+  <data key="d2">The process of intentionally introducing impurities into a pure semiconductor to alter its electrical properties, significantly changing its conductivity.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982430</data>
+  <data key="d6"></data>
+</node>
+<node id="Carrier">
+  <data key="d0">Carrier</data>
+  <data key="d1">concept</data>
+  <data key="d2">Particles in a semiconductor responsible for charge transport, including electrons and holes.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982430</data>
+  <data key="d6"></data>
+</node>
+<node id="Electron">
+  <data key="d0">Electron</data>
+  <data key="d1">naturalobject</data>
+  <data key="d2">A negatively charged particle located in the conduction band of a semiconductor.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982430</data>
+  <data key="d6"></data>
+</node>
+<node id="Hole">
+  <data key="d0">Hole</data>
+  <data key="d1">naturalobject</data>
+  <data key="d2">A positively charged "virtual particle" located in the valence band, representing the absence of an electron.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982431</data>
+  <data key="d6"></data>
+</node>
+<node id="N-Type Semiconductor">
+  <data key="d0">N-Type Semiconductor</data>
+  <data key="d1">concept</data>
+  <data key="d2">A type of doped semiconductor where 5-valent elements (such as phosphorus or arsenic) are added to a 4-valent element (like silicon), making electrons the majority carriers and holes the minority carriers.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982431</data>
+  <data key="d6"></data>
+</node>
+<node id="P-Type Semiconductor">
+  <data key="d0">P-Type Semiconductor</data>
+  <data key="d1">concept</data>
+  <data key="d2">A type of doped semiconductor where 3-valent elements (such as boron or indium) are added to a 4-valent element, making holes the majority carriers and electrons the minority carriers.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982431</data>
+  <data key="d6"></data>
+</node>
+<node id="PN Junction">
+  <data key="d0">PN Junction</data>
+  <data key="d1">concept</data>
+  <data key="d2">A special region formed at the interface between P-type and N-type semiconductors, which has unidirectional conductivity and is the basis for diodes and transistors.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982431</data>
+  <data key="d6"></data>
+</node>
+<node id="Silicon">
+  <data key="d0">Silicon</data>
+  <data key="d1">material</data>
+  <data key="d2">A first-generation semiconductor material, widely used in CPUs, memory, and logic devices due to its mature technology and low cost.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982431</data>
+  <data key="d6"></data>
+</node>
+<node id="Germanium">
+  <data key="d0">Germanium</data>
+  <data key="d1">material</data>
+  <data key="d2">A first-generation semiconductor material, often used in conjunction with silicon.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982431</data>
+  <data key="d6"></data>
+</node>
+<node id="Gallium Arsenide">
+  <data key="d0">Gallium Arsenide</data>
+  <data key="d1">material</data>
+  <data key="d2">A second-generation semiconductor material with high electron mobility, suitable for high-frequency and high-speed applications such as satellite communication and radar.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982431</data>
+  <data key="d6"></data>
+</node>
+<node id="Indium Phosphide">
+  <data key="d0">Indium Phosphide</data>
+  <data key="d1">material</data>
+  <data key="d2">A second-generation semiconductor material, also used in high-frequency and high-speed applications.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982431</data>
+  <data key="d6"></data>
+</node>
+<node id="Silicon Carbide">
+  <data key="d0">Silicon Carbide</data>
+  <data key="d1">material</data>
+  <data key="d2">A third-generation semiconductor material with a wide bandgap, high breakdown electric field, and high thermal conductivity, suitable for high-temperature, high-frequency, and high-power devices.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982432</data>
+  <data key="d6"></data>
+</node>
+<node id="Gallium Nitride">
+  <data key="d0">Gallium Nitride</data>
+  <data key="d1">material</data>
+  <data key="d2">A third-generation semiconductor material, also with a wide bandgap and high thermal conductivity, used in high-temperature, high-frequency, and high-power devices.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982432</data>
+  <data key="d6"></data>
+</node>
+<node id="Diode">
+  <data key="d0">Diode</data>
+  <data key="d1">artifact</data>
+  <data key="d2">A diode is a semiconductor device that uses the unidirectional conductivity of a PN junction for rectification, detection, and voltage regulation.&lt;SEP&gt;An electronic component that uses the unidirectional conductivity of a PN junction for rectification, detection, and voltage regulation.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33&lt;SEP&gt;chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982432</data>
+  <data key="d6"></data>
+</node>
+<node id="Bipolar Junction Transistor (BJT)">
+  <data key="d0">Bipolar Junction Transistor (BJT)</data>
+  <data key="d1">artifact</data>
+  <data key="d2">A three-terminal electronic component with current amplification capabilities, used in amplifying and switching circuits.</data>
+  <data key="d3">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982432</data>
+  <data key="d6"></data>
+</node>
+<node id="Bjt">
+  <data key="d0">Bjt</data>
+  <data key="d1">artifact</data>
+  <data key="d2">BJT, or bipolar junction transistor, is a type of transistor with current amplification capabilities, used in amplifying and switching circuits.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982432</data>
+  <data key="d6"></data>
+</node>
+<node id="Fet/Mosfet">
+  <data key="d0">Fet/Mosfet</data>
+  <data key="d1">artifact</data>
+  <data key="d2">FET, or field-effect transistor, is a voltage-controlled device with high input impedance, serving as a fundamental unit in modern large-scale integrated circuits like CPUs.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982432</data>
+  <data key="d6"></data>
+</node>
+<node id="Integrated Circuit (Ic)">
+  <data key="d0">Integrated Circuit (Ic)</data>
+  <data key="d1">artifact</data>
+  <data key="d2">An integrated circuit (IC) is a semiconductor device that combines a large number of transistors, resistors, capacitors, and other components on a single chip.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982432</data>
+  <data key="d6"></data>
+</node>
+<node id="Wafer">
+  <data key="d0">Wafer</data>
+  <data key="d1">artifact</data>
+  <data key="d2">A wafer is a thin slice of silicon, cut from a single crystal silicon ingot, used as the base material for semiconductor manufacturing.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982432</data>
+  <data key="d6"></data>
+</node>
+<node id="Oxidation">
+  <data key="d0">Oxidation</data>
+  <data key="d1">method</data>
+  <data key="d2">Oxidation is a process in semiconductor manufacturing where a protective layer of silicon dioxide is formed on the surface of the wafer.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f&lt;SEP&gt;chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982433</data>
+  <data key="d6"></data>
+</node>
+<node id="Lithography">
+  <data key="d0">Lithography</data>
+  <data key="d1">method</data>
+  <data key="d2">Lithography is a critical step in semiconductor manufacturing that uses photoresist and a mask to transfer circuit patterns onto the wafer surface.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982433</data>
+  <data key="d6"></data>
+</node>
+<node id="Etching">
+  <data key="d0">Etching</data>
+  <data key="d1">method</data>
+  <data key="d2">Etching is a process in semiconductor manufacturing that removes unwanted oxide or metal layers from the wafer.&lt;SEP&gt;Etching is a process used to remove material from the wafer to create the desired circuit structures.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f&lt;SEP&gt;chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">半导体材料介绍.txt&lt;SEP&gt;集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Ion Implantation">
+  <data key="d0">Ion Implantation</data>
+  <data key="d1">method</data>
+  <data key="d2">Ion implantation is a process in semiconductor manufacturing that introduces impurities into specific regions to form P-type or N-type areas.&lt;SEP&gt;Ion Implantation is a technique used to introduce impurities into the silicon wafer to modify its electrical properties.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f&lt;SEP&gt;chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">半导体材料介绍.txt&lt;SEP&gt;集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Deposition">
+  <data key="d0">Deposition</data>
+  <data key="d1">method</data>
+  <data key="d2">Deposition is a process in semiconductor manufacturing that forms metal interconnects or insulating layers on the wafer.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982433</data>
+  <data key="d6"></data>
+</node>
+<node id="Packaging &amp; Testing">
+  <data key="d0">Packaging &amp; Testing</data>
+  <data key="d1">method</data>
+  <data key="d2">Packaging and testing are the final steps in semiconductor manufacturing, where the wafer is cut into individual chips, packaged, and tested for electrical performance.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982433</data>
+  <data key="d6"></data>
+</node>
+<node id="Semiconductor Device">
+  <data key="d0">Semiconductor Device</data>
+  <data key="d1">artifact</data>
+  <data key="d2">A semiconductor device is a type of electronic component that utilizes the properties of semiconductor materials, such as diodes, transistors, and integrated circuits.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d4">半导体材料介绍.txt</data>
+  <data key="d5">1770982433</data>
+  <data key="d6"></data>
+</node>
+<node id="Semiconductor Manufacturing">
+  <data key="d0">Semiconductor Manufacturing</data>
+  <data key="d1">process</data>
+  <data key="d2">Semiconductor manufacturing is the process of creating semiconductor devices, involving steps like wafer preparation, oxidation, lithography, etching, ion implantation, deposition, and packaging and testing.&lt;SEP&gt;Semiconductor Manufacturing encompasses all steps from wafer preparation to final testing and packaging.</data>
+  <data key="d3">chunk-ae080121232af020ad6ba3a6ec2d7d3f&lt;SEP&gt;chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">半导体材料介绍.txt&lt;SEP&gt;集成电路制造工艺.txt</data>
+  <data key="d5">1770983002</data>
+  <data key="d6"></data>
+</node>
+<node id="CMP Technology">
+  <data key="d0">CMP Technology</data>
+  <data key="d1">method</data>
+  <data key="d2">CMP Technology is a critical process used to polish the surface of wafers for multi-layer metal interconnects in modern chips.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983001</data>
+  <data key="d6"></data>
+</node>
+<node id="Metalization">
+  <data key="d0">Metalization</data>
+  <data key="d1">process</data>
+  <data key="d2">Metalization is the process of creating electrical connections using copper or aluminum in semiconductor manufacturing.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983001</data>
+  <data key="d6"></data>
+</node>
+<node id="Back-End-of-Line (BEOL)">
+  <data key="d0">Back-End-of-Line (BEOL)</data>
+  <data key="d1">process</data>
+  <data key="d2">BEOL refers to the later stages of semiconductor manufacturing that involve connecting transistors into circuits.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983001</data>
+  <data key="d6"></data>
+</node>
+<node id="Wafer Sort (CP)">
+  <data key="d0">Wafer Sort (CP)</data>
+  <data key="d1">process</data>
+  <data key="d2">Wafer Sort is the testing phase where each chip on a wafer is electrically tested and defective chips are marked.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983001</data>
+  <data key="d6"></data>
+</node>
+<node id="Dicing">
+  <data key="d0">Dicing</data>
+  <data key="d1">process</data>
+  <data key="d2">Dicing is the process of cutting a wafer into individual chips (Dies).</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983001</data>
+  <data key="d6"></data>
+</node>
+<node id="Packaging">
+  <data key="d0">Packaging</data>
+  <data key="d1">process</data>
+  <data key="d2">Packaging involves securing the chip on a substrate, connecting its pins, and protecting it with materials like epoxy.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983001</data>
+  <data key="d6"></data>
+</node>
+<node id="Final Test (FT)">
+  <data key="d0">Final Test (FT)</data>
+  <data key="d1">process</data>
+  <data key="d2">Final Test is the comprehensive testing of packaged chips for functionality and environmental performance.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983001</data>
+  <data key="d6"></data>
+</node>
+<node id="Photoresist">
+  <data key="d0">Photoresist</data>
+  <data key="d1">material</data>
+  <data key="d2">Photoresist is a light-sensitive organic material used in photolithography, available in positive and negative types.&lt;SEP&gt;Photoresist is a light-sensitive material used in photolithography to transfer circuit patterns onto the wafer.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7&lt;SEP&gt;chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983001</data>
+  <data key="d6"></data>
+</node>
+<node id="Mask (Reticle)">
+  <data key="d0">Mask (Reticle)</data>
+  <data key="d1">artifact</data>
+  <data key="d2">A Mask is a transparent plate with circuit patterns used in photolithography, typically four times the size of the actual chip design.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983002</data>
+  <data key="d6"></data>
+</node>
+<node id="Critical Dimension (CD)">
+  <data key="d0">Critical Dimension (CD)</data>
+  <data key="d1">concept</data>
+  <data key="d2">Critical Dimension refers to the smallest line width that can be manufactured, often corresponding to the gate length in semiconductor processes.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983002</data>
+  <data key="d6"></data>
+</node>
+<node id="Yield">
+  <data key="d0">Yield</data>
+  <data key="d1">concept</data>
+  <data key="d2">Yield is the percentage of functional chips on a wafer, serving as a key economic indicator in semiconductor manufacturing.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983002</data>
+  <data key="d6"></data>
+</node>
+<node id="FinFET">
+  <data key="d0">FinFET</data>
+  <data key="d1">artifact</data>
+  <data key="d2">FinFET is a 3D transistor structure that improves current control compared to planar transistors, used in 22nm to 3nm processes.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983002</data>
+  <data key="d6"></data>
+</node>
+<node id="GAA (Gate-All-Around)">
+  <data key="d0">GAA (Gate-All-Around)</data>
+  <data key="d1">artifact</data>
+  <data key="d2">GAA is an advanced transistor structure where the gate surrounds the channel, used in 3nm and smaller processes.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983002</data>
+  <data key="d6"></data>
+</node>
+<node id="EUV (Extreme Ultraviolet)">
+  <data key="d0">EUV (Extreme Ultraviolet)</data>
+  <data key="d1">technology</data>
+  <data key="d2">EUV is a lithography technology using 13.5nm wavelength light, essential for manufacturing chips below 7nm.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983002</data>
+  <data key="d6"></data>
+</node>
+<node id="Multi-Layer Metal Interconnect">
+  <data key="d0">Multi-Layer Metal Interconnect</data>
+  <data key="d1">concept</data>
+  <data key="d2">Multi-Layer Metal Interconnect refers to the complex network of metal lines in modern chips, typically ranging from 10 to 15 layers.</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983002</data>
+  <data key="d6"></data>
+</node>
+<node id="Integrated Circuit Manufacturing Process">
+  <data key="d0">Integrated Circuit Manufacturing Process</data>
+  <data key="d1">concept</data>
+  <data key="d2">The Integrated Circuit Manufacturing Process refers to the complex series of steps used to create microelectronic circuits on silicon wafers.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Silicon Wafer">
+  <data key="d0">Silicon Wafer</data>
+  <data key="d1">artifact</data>
+  <data key="d2">Silicon wafer is the base material used in semiconductor manufacturing, typically made from purified silicon.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Cleanroom">
+  <data key="d0">Cleanroom</data>
+  <data key="d1">location</data>
+  <data key="d2">A cleanroom is a controlled environment with extremely low levels of particulates, essential for semiconductor fabrication.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Front-End-of-Line">
+  <data key="d0">Front-End-of-Line</data>
+  <data key="d1">concept</data>
+  <data key="d2">Front-End-of-Line refers to the initial stages of semiconductor manufacturing, including transistor formation and interconnects.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Back-End-of-Line">
+  <data key="d0">Back-End-of-Line</data>
+  <data key="d1">concept</data>
+  <data key="d2">Back-End-of-Line refers to the later stages of semiconductor manufacturing, focusing on metal interconnections and packaging.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Thin Film Deposition">
+  <data key="d0">Thin Film Deposition</data>
+  <data key="d1">method</data>
+  <data key="d2">Thin Film Deposition is a process used to coat the wafer with layers of materials such as insulators or metals.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Photolithography">
+  <data key="d0">Photolithography</data>
+  <data key="d1">method</data>
+  <data key="d2">Photolithography is a critical process that transfers circuit patterns onto the wafer using light and photoresist.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Chemical Mechanical Polishing">
+  <data key="d0">Chemical Mechanical Polishing</data>
+  <data key="d1">method</data>
+  <data key="d2">Chemical Mechanical Polishing is a process used to flatten the surface of the wafer after multiple layers are deposited.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Metallization">
+  <data key="d0">Metallization</data>
+  <data key="d1">method</data>
+  <data key="d2">Metallization is the process of creating conductive pathways (wires) on the chip to connect transistors.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="ASML EUV Lithography Machine">
+  <data key="d0">ASML EUV Lithography Machine</data>
+  <data key="d1">artifact</data>
+  <data key="d2">ASML EUV Lithography Machine is a high-precision tool used in photolithography for advanced chip manufacturing.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Silicon Dioxide">
+  <data key="d0">Silicon Dioxide</data>
+  <data key="d1">naturalobject</data>
+  <data key="d2">Silicon dioxide is a compound used as an insulating layer in semiconductor devices.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Mask Reticle">
+  <data key="d0">Mask Reticle</data>
+  <data key="d1">artifact</data>
+  <data key="d2">A mask reticle is a transparent plate with a circuit pattern used in photolithography to project the design onto the wafer.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Sputtering">
+  <data key="d0">Sputtering</data>
+  <data key="d1">method</data>
+  <data key="d2">Sputtering is a physical vapor deposition technique used to deposit thin metallic layers on the wafer.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Chemical Vapor Deposition">
+  <data key="d0">Chemical Vapor Deposition</data>
+  <data key="d1">method</data>
+  <data key="d2">Chemical Vapor Deposition is a process used to deposit thin films by chemical reactions in a gaseous state.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983003</data>
+  <data key="d6"></data>
+</node>
+<node id="Plasma Etching">
+  <data key="d0">Plasma Etching</data>
+  <data key="d1">method</data>
+  <data key="d2">Plasma Etching is a dry etching technique that uses ionized gas to remove material from the wafer.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983004</data>
+  <data key="d6"></data>
+</node>
+<node id="Annealing">
+  <data key="d0">Annealing</data>
+  <data key="d1">method</data>
+  <data key="d2">Annealing is a heat treatment process used to repair crystal lattice damage and activate implanted ions.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983004</data>
+  <data key="d6"></data>
+</node>
+<node id="Silicon Ingot">
+  <data key="d0">Silicon Ingot</data>
+  <data key="d1">artifact</data>
+  <data key="d2">Silicon ingot is a single-crystal silicon rod produced by the Czochralski process.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983004</data>
+  <data key="d6"></data>
+</node>
+<node id="Czochralski Process">
+  <data key="d0">Czochralski Process</data>
+  <data key="d1">method</data>
+  <data key="d2">The Czochralski Process is a method used to grow single-crystal silicon ingots from molten silicon.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983004</data>
+  <data key="d6"></data>
+</node>
+<node id="Wafer Fabrication">
+  <data key="d0">Wafer Fabrication</data>
+  <data key="d1">concept</data>
+  <data key="d2">Wafer Fabrication refers to the entire process of creating integrated circuits on a silicon wafer.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983004</data>
+  <data key="d6"></data>
+</node>
+<node id="Semiconductor Process">
+  <data key="d0">Semiconductor Process</data>
+  <data key="d1">concept</data>
+  <data key="d2">Semiconductor Process is the overall set of techniques used to manufacture electronic components on a silicon wafer.</data>
+  <data key="d3">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983004</data>
+  <data key="d6"></data>
+</node>
+<node id="Mask">
+  <data key="d0">Mask</data>
+  <data key="d3">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d2">Photoresist interacts with the Mask during photolithography to transfer circuit patterns onto the wafer.</data>
+  <data key="d1">UNKNOWN</data>
+  <data key="d4">集成电路制造工艺.txt</data>
+  <data key="d5">1770983005</data>
+  <data key="d6"></data>
+</node>
+<edge source="高阶成语词典" target="虚与委蛇">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Xu Yu Wei Yi."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957323</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="颐指气使">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Yi Zhi Qi Shi."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957324</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="刚愎自用">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Gang Bi Zi Yong."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957324</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="韬光养晦">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Tao Guang Yang Hui."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957325</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="如履薄冰">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Ru Lü Bo Bing."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957325</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="讳莫如深">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Hui Mo Ru Shen."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957326</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="越俎代庖">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Yue Zu Dai Pao."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957326</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="暴殄天物">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Bao Tian Tian Wu."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957327</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="趋之若鹜">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Qu Zhi Ru Wu."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957327</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="怙恶不悛">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Hu E Bu Quan."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957328</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="差强人意">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Cha Qiang Ren Yi."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957328</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="空穴来风">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Kong Xue Lai Feng."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957329</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="炙手可热">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Zhi Shou Ke Re."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957329</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="不刊之论">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Bu Kan Zhi Lun."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957330</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="文不加点">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Wen Bu Jia Dian."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957330</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="首鼠两端">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Shou Shu Liang Duan."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957331</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="不足为训">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Bu Zu Wei Xun."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957331</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="侧目而视">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Ce Mu Er Shi."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957332</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="望其项背">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary provides the definition of the idiom "Wang Qi Xiang Bei."</data>
+  <data key="d9">definition,idiom reference</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957332</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="第一组">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary organizes idioms into groups, with the First Group focusing on expressions related to behavior and attitude.</data>
+  <data key="d9">content grouping,thematic classification</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957333</data>
+  <data key="d13"></data>
+</edge>
+<edge source="高阶成语词典" target="第二组">
+  <data key="d7">1.0</data>
+  <data key="d8">The High-Level Idiom Dictionary organizes idioms into groups, with the Second Group focusing on commonly misused idioms.</data>
+  <data key="d9">content grouping,thematic classification</data>
+  <data key="d10">chunk-37ffe9e38fd706ab579d8ed250d4e77a</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957333</data>
+  <data key="d13"></data>
+</edge>
+<edge source="侧目而视" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "侧目而视" has a specific meaning and cultural context related to fear and resentment.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957333</data>
+  <data key="d13"></data>
+</edge>
+<edge source="侧目而视" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "侧目而视" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957337</data>
+  <data key="d13"></data>
+</edge>
+<edge source="望其项背" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "望其项背" has a specific meaning and cultural context related to being able to catch up or match someone.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957334</data>
+  <data key="d13"></data>
+</edge>
+<edge source="望其项背" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "望其项背" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957338</data>
+  <data key="d13"></data>
+</edge>
+<edge source="鞭辟入里" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "鞭辟入里" has a specific meaning and cultural context related to penetrating analysis.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957341</data>
+  <data key="d13"></data>
+</edge>
+<edge source="鞭辟入里" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "鞭辟入里" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957347</data>
+  <data key="d13"></data>
+</edge>
+<edge source="登堂入室" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "登堂入室" has a specific meaning and cultural context related to achieving a high level of skill or knowledge.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957331</data>
+  <data key="d13"></data>
+</edge>
+<edge source="登堂入室" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "登堂入室" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957338</data>
+  <data key="d13"></data>
+</edge>
+<edge source="沧海桑田" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "沧海桑田" has a specific meaning and cultural context related to great changes in the world.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957332</data>
+  <data key="d13"></data>
+</edge>
+<edge source="沧海桑田" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "沧海桑田" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957339</data>
+  <data key="d13"></data>
+</edge>
+<edge source="白云苍狗" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "白云苍狗" has a specific meaning and cultural context related to the changing nature of the world.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957332</data>
+  <data key="d13"></data>
+</edge>
+<edge source="白云苍狗" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "白云苍狗" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957340</data>
+  <data key="d13"></data>
+</edge>
+<edge source="筚路蓝缕" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "筚路蓝缕" has a specific meaning and cultural context related to the hardships of pioneering.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957333</data>
+  <data key="d13"></data>
+</edge>
+<edge source="筚路蓝缕" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "筚路蓝缕" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957340</data>
+  <data key="d13"></data>
+</edge>
+<edge source="栉风沐雨" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "栉风沐雨" has a specific meaning and cultural context related to hardship and exposure to weather.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957334</data>
+  <data key="d13"></data>
+</edge>
+<edge source="栉风沐雨" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "栉风沐雨" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957341</data>
+  <data key="d13"></data>
+</edge>
+<edge source="间不容发" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "间不容发" has a specific meaning and cultural context related to urgency.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957335</data>
+  <data key="d13"></data>
+</edge>
+<edge source="间不容发" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "间不容发" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957341</data>
+  <data key="d13"></data>
+</edge>
+<edge source="甚嚣尘上" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "甚嚣尘上" has a specific meaning and cultural context related to loud and arrogant speech.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957335</data>
+  <data key="d13"></data>
+</edge>
+<edge source="甚嚣尘上" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "甚嚣尘上" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957342</data>
+  <data key="d13"></data>
+</edge>
+<edge source="如火如荼" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "如火如荼" has a specific meaning and cultural context related to intensity and passion.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957336</data>
+  <data key="d13"></data>
+</edge>
+<edge source="如火如荼" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "如火如荼" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957342</data>
+  <data key="d13"></data>
+</edge>
+<edge source="泾渭分明" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "泾渭分明" has a specific meaning and cultural context related to clear distinctions.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957336</data>
+  <data key="d13"></data>
+</edge>
+<edge source="泾渭分明" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "泾渭分明" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957343</data>
+  <data key="d13"></data>
+</edge>
+<edge source="分庭抗礼" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "分庭抗礼" has a specific meaning and cultural context related to equality and mutual respect.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957337</data>
+  <data key="d13"></data>
+</edge>
+<edge source="分庭抗礼" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "分庭抗礼" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957343</data>
+  <data key="d13"></data>
+</edge>
+<edge source="管鲍之交" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "管鲍之交" has a specific meaning and cultural context related to deep friendship.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957337</data>
+  <data key="d13"></data>
+</edge>
+<edge source="管鲍之交" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "管鲍之交" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957344</data>
+  <data key="d13"></data>
+</edge>
+<edge source="韦编三绝" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "韦编三绝" has a specific meaning and cultural context related to dedication to study.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957338</data>
+  <data key="d13"></data>
+</edge>
+<edge source="韦编三绝" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "韦编三绝" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957344</data>
+  <data key="d13"></data>
+</edge>
+<edge source="洛阳纸贵" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "洛阳纸贵" has a specific meaning and cultural context related to the popularity of a literary work.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957338</data>
+  <data key="d13"></data>
+</edge>
+<edge source="洛阳纸贵" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "洛阳纸贵" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957345</data>
+  <data key="d13"></data>
+</edge>
+<edge source="汗牛充栋" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "汗牛充栋" has a specific meaning and cultural context related to a large book collection.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957339</data>
+  <data key="d13"></data>
+</edge>
+<edge source="汗牛充栋" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "汗牛充栋" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957345</data>
+  <data key="d13"></data>
+</edge>
+<edge source="诘屈聱牙" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "诘屈聱牙" has a specific meaning and cultural context related to awkward phrasing.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957340</data>
+  <data key="d13"></data>
+</edge>
+<edge source="诘屈聱牙" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "诘屈聱牙" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957346</data>
+  <data key="d13"></data>
+</edge>
+<edge source="振聋发聩" target="释义">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "振聋发聩" has a specific meaning and cultural context related to awakening the ignorant.</data>
+  <data key="d9">cultural context,idiom meaning</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957340</data>
+  <data key="d13"></data>
+</edge>
+<edge source="振聋发聩" target="拼音">
+  <data key="d7">1.0</data>
+  <data key="d8">The idiom "振聋发聩" has a specific phonetic transcription indicating its pronunciation.</data>
+  <data key="d9">phonetic transcription</data>
+  <data key="d10">chunk-cb6cd44c141f5e92d08db5f248c68c5c</data>
+  <data key="d11">40个高级成语.txt</data>
+  <data key="d12">1770957346</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Valence Band">
+  <data key="d7">1.0</data>
+  <data key="d8">The valence band in a semiconductor is filled with electrons at absolute zero temperature.</data>
+  <data key="d9">band theory,energy structure</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982434</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Conduction Band">
+  <data key="d7">1.0</data>
+  <data key="d8">The conduction band in a semiconductor is where electrons can move freely and conduct electricity.</data>
+  <data key="d9">band theory,energy structure</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982434</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Band Gap">
+  <data key="d7">1.0</data>
+  <data key="d8">The band gap in a semiconductor is the energy difference between the valence band and the conduction band.</data>
+  <data key="d9">band theory,energy structure</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982435</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Intrinsic Semiconductor">
+  <data key="d7">1.0</data>
+  <data key="d8">An intrinsic semiconductor is a pure form of a semiconductor, which behaves as an insulator at absolute zero and its conductivity increases with temperature.</data>
+  <data key="d9">conductivity,purity</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982435</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Doping">
+  <data key="d7">1.0</data>
+  <data key="d8">Doping is the process of adding impurities to a semiconductor to change its electrical properties and conductivity.</data>
+  <data key="d9">conductivity,modification</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982436</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Carrier">
+  <data key="d7">1.0</data>
+  <data key="d8">Carriers in a semiconductor, such as electrons and holes, are responsible for charge transport.</data>
+  <data key="d9">charge transport,particles</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982436</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="N-Type Semiconductor">
+  <data key="d7">1.0</data>
+  <data key="d8">N-type semiconductors are created by doping with 5-valent elements, making electrons the majority carriers.</data>
+  <data key="d9">conductivity,doping</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982436</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="P-Type Semiconductor">
+  <data key="d7">1.0</data>
+  <data key="d8">P-type semiconductors are created by doping with 3-valent elements, making holes the majority carriers.</data>
+  <data key="d9">conductivity,doping</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982437</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="PN Junction">
+  <data key="d7">1.0</data>
+  <data key="d8">A PN junction is formed at the interface between P-type and N-type semiconductors, providing unidirectional conductivity.</data>
+  <data key="d9">conductivity,junction</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982437</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Silicon">
+  <data key="d7">1.0</data>
+  <data key="d8">Silicon is a first-generation semiconductor material widely used in CPUs, memory, and logic devices.</data>
+  <data key="d9">application,material</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982438</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Germanium">
+  <data key="d7">1.0</data>
+  <data key="d8">Germanium is a first-generation semiconductor material often used alongside silicon.</data>
+  <data key="d9">application,material</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982438</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Gallium Arsenide">
+  <data key="d7">1.0</data>
+  <data key="d8">Gallium arsenide is a second-generation semiconductor material used in high-frequency and high-speed applications.</data>
+  <data key="d9">application,material</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982439</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Indium Phosphide">
+  <data key="d7">1.0</data>
+  <data key="d8">Indium phosphide is a second-generation semiconductor material used in high-frequency and high-speed applications.</data>
+  <data key="d9">application,material</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982440</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Silicon Carbide">
+  <data key="d7">1.0</data>
+  <data key="d8">Silicon carbide is a third-generation semiconductor material used in high-temperature, high-frequency, and high-power devices.</data>
+  <data key="d9">application,material</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982440</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Gallium Nitride">
+  <data key="d7">1.0</data>
+  <data key="d8">Gallium nitride is a third-generation semiconductor material used in high-temperature, high-frequency, and high-power devices.</data>
+  <data key="d9">application,material</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982441</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Diode">
+  <data key="d7">1.0</data>
+  <data key="d8">A diode is a semiconductor device that uses the unidirectional conductivity of a PN junction for various applications.</data>
+  <data key="d9">application,device</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982442</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor" target="Bipolar Junction Transistor (BJT)">
+  <data key="d7">1.0</data>
+  <data key="d8">A BJT is a semiconductor device with current amplification capabilities, used in amplifying and switching circuits.</data>
+  <data key="d9">application,device</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982442</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Electron" target="N-Type Semiconductor">
+  <data key="d7">1.0</data>
+  <data key="d8">In N-type semiconductors, electrons are the majority carriers and are responsible for the primary conduction.</data>
+  <data key="d9">conductivity,majority carrier</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982438</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Hole" target="P-Type Semiconductor">
+  <data key="d7">1.0</data>
+  <data key="d8">In P-type semiconductors, holes are the majority carriers and are responsible for the primary conduction.</data>
+  <data key="d9">conductivity,majority carrier</data>
+  <data key="d10">chunk-4ec8b1d356971d5996696430fb70aa33</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982439</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Diode" target="Semiconductor Device">
+  <data key="d7">1.0</data>
+  <data key="d8">A diode is a type of semiconductor device used for rectification, detection, and voltage regulation.</data>
+  <data key="d9">electronic component,functionality</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982442</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Bjt" target="Semiconductor Device">
+  <data key="d7">1.0</data>
+  <data key="d8">BJT is a type of semiconductor device used for current amplification in amplifying and switching circuits.</data>
+  <data key="d9">electronic component,functionality</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982440</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Fet/Mosfet" target="Semiconductor Device">
+  <data key="d7">1.0</data>
+  <data key="d8">FET is a type of semiconductor device used for voltage control and is a fundamental unit in modern large-scale integrated circuits.</data>
+  <data key="d9">electronic component,functionality</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982440</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Integrated Circuit (Ic)" target="Semiconductor Device">
+  <data key="d7">1.0</data>
+  <data key="d8">An integrated circuit (IC) is a semiconductor device that integrates a large number of transistors, resistors, and other components on a single chip.</data>
+  <data key="d9">electronic component,integration</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982441</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Wafer" target="Semiconductor Manufacturing">
+  <data key="d7">1.0</data>
+  <data key="d8">A wafer is the base material used in the semiconductor manufacturing process, cut from a single crystal silicon ingot.</data>
+  <data key="d9">base,material</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982440</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Oxidation" target="Semiconductor Manufacturing">
+  <data key="d7">1.0</data>
+  <data key="d8">Oxidation is a process in semiconductor manufacturing that forms a protective layer of silicon dioxide on the wafer surface.</data>
+  <data key="d9">process,protection</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982441</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Oxidation" target="Silicon Wafer">
+  <data key="d7">1.0</data>
+  <data key="d8">Oxidation is used to grow a layer of silicon dioxide on the surface of the silicon wafer.</data>
+  <data key="d9">layer formation,surface treatment</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983012</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Oxidation" target="Silicon Dioxide">
+  <data key="d7">1.0</data>
+  <data key="d8">Oxidation results in the formation of a silicon dioxide layer on the silicon wafer.</data>
+  <data key="d9">layer creation,material result</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983013</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Lithography" target="Semiconductor Manufacturing">
+  <data key="d7">1.0</data>
+  <data key="d8">Lithography is a critical process in semiconductor manufacturing that transfers circuit patterns onto the wafer surface using photoresist and a mask.</data>
+  <data key="d9">pattern transfer,process</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982442</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Etching" target="Semiconductor Manufacturing">
+  <data key="d7">1.0</data>
+  <data key="d8">Etching is a process in semiconductor manufacturing that removes unwanted oxide or metal layers from the wafer.</data>
+  <data key="d9">process,removal</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982442</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Etching" target="Silicon Wafer">
+  <data key="d7">1.0</data>
+  <data key="d8">Etching is used to remove material from the silicon wafer to shape the circuit structure.</data>
+  <data key="d9">material removal,structural shaping</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983008</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Etching" target="Plasma Etching">
+  <data key="d7">1.0</data>
+  <data key="d8">Plasma Etching is a type of etching that uses plasma for material removal.</data>
+  <data key="d9">dry etching,method type</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983009</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Etching" target="Photolithography">
+  <data key="d7">1.0</data>
+  <data key="d8">Photolithography is followed by etching to transfer the pattern onto the wafer.</data>
+  <data key="d9">pattern transfer,sequential process</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983011</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Ion Implantation" target="Semiconductor Manufacturing">
+  <data key="d7">1.0</data>
+  <data key="d8">Ion implantation is a process in semiconductor manufacturing that introduces impurities into specific regions to form P-type or N-type areas.</data>
+  <data key="d9">doping,process</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982443</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Ion Implantation" target="Silicon Wafer">
+  <data key="d7">1.0</data>
+  <data key="d8">Ion implantation introduces impurities into the silicon wafer to modify its electrical properties.</data>
+  <data key="d9">doping process,electrical modification</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983008</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Ion Implantation" target="Annealing">
+  <data key="d7">1.0</data>
+  <data key="d8">Annealing is performed after ion implantation to repair crystal lattice damage.</data>
+  <data key="d9">defect repair,post-process treatment</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983010</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Ion Implantation" target="Photolithography">
+  <data key="d7">1.0</data>
+  <data key="d8">Photolithography is followed by ion implantation to prepare for doping.</data>
+  <data key="d9">doping preparation,sequential process</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983011</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Deposition" target="Semiconductor Manufacturing">
+  <data key="d7">1.0</data>
+  <data key="d8">Deposition is a process in semiconductor manufacturing that forms metal interconnects or insulating layers on the wafer.</data>
+  <data key="d9">layer formation,process</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982444</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Packaging &amp; Testing" target="Semiconductor Manufacturing">
+  <data key="d7">1.0</data>
+  <data key="d8">Packaging and testing are the final steps in semiconductor manufacturing, where the wafer is cut into individual chips, packaged, and tested for electrical performance.</data>
+  <data key="d9">finalization,process</data>
+  <data key="d10">chunk-ae080121232af020ad6ba3a6ec2d7d3f</data>
+  <data key="d11">半导体材料介绍.txt</data>
+  <data key="d12">1770982444</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="Wafer Sort (CP)">
+  <data key="d7">1.0</data>
+  <data key="d8">Wafer Sort is a critical testing phase within semiconductor manufacturing to identify defective chips.</data>
+  <data key="d9">quality control,testing phase</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983005</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="Dicing">
+  <data key="d7">1.0</data>
+  <data key="d8">Dicing is a physical process in semiconductor manufacturing that separates the wafer into individual chips.</data>
+  <data key="d9">chip division,physical separation</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983005</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="Packaging">
+  <data key="d7">1.0</data>
+  <data key="d8">Packaging is the final stage of semiconductor manufacturing that protects and secures the chip.</data>
+  <data key="d9">final stage,protection</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983006</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="Final Test (FT)">
+  <data key="d7">1.0</data>
+  <data key="d8">Final Test is a quality assurance step in semiconductor manufacturing that validates chip performance.</data>
+  <data key="d9">performance validation,quality assurance</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983007</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="Critical Dimension (CD)">
+  <data key="d7">1.0</data>
+  <data key="d8">Critical Dimension defines the technical specifications of semiconductor manufacturing processes.</data>
+  <data key="d9">process node,technical specification</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983007</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="Yield">
+  <data key="d7">1.0</data>
+  <data key="d8">Yield is a key economic metric in semiconductor manufacturing that reflects production efficiency.</data>
+  <data key="d9">economic metric,production efficiency</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983008</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="FinFET">
+  <data key="d7">1.0</data>
+  <data key="d8">FinFET is a transistor structure used in specific semiconductor manufacturing process nodes.</data>
+  <data key="d9">process node,transistor structure</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983008</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="GAA (Gate-All-Around)">
+  <data key="d7">1.0</data>
+  <data key="d8">GAA is an advanced transistor structure used in very small semiconductor manufacturing nodes.</data>
+  <data key="d9">advanced node,transistor structure</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983009</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Semiconductor Manufacturing" target="EUV (Extreme Ultraviolet)">
+  <data key="d7">1.0</data>
+  <data key="d8">EUV is a lithography technology required for manufacturing advanced semiconductor nodes below 7nm.</data>
+  <data key="d9">advanced node,lithography technology</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983010</data>
+  <data key="d13"></data>
+</edge>
+<edge source="CMP Technology" target="Multi-Layer Metal Interconnect">
+  <data key="d7">1.0</data>
+  <data key="d8">CMP Technology is essential for achieving multi-layer metal interconnects in modern chips.</data>
+  <data key="d9">fabrication requirement,process dependency</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983005</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Metalization" target="Back-End-of-Line (BEOL)">
+  <data key="d7">1.0</data>
+  <data key="d8">Metalization is a key step in the Back-End-of-Line process that connects transistors into circuits.</data>
+  <data key="d9">circuit creation,process step</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983005</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Photoresist" target="Mask">
+  <data key="d7">1.0</data>
+  <data key="d8">Photoresist interacts with the Mask during photolithography to transfer circuit patterns onto the wafer.</data>
+  <data key="d9">material interaction,photolithography</data>
+  <data key="d10">chunk-29d2df4d26a3885b820e69482a2d3ea7</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983005</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Photoresist" target="Photolithography">
+  <data key="d7">1.0</data>
+  <data key="d8">Photolithography involves the application and exposure of photoresist on the silicon wafer.</data>
+  <data key="d9">material interaction,process step</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983008</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Integrated Circuit Manufacturing Process" target="Silicon Wafer">
+  <data key="d7">1.0</data>
+  <data key="d8">The Integrated Circuit Manufacturing Process begins with the silicon wafer, which serves as the base material.</data>
+  <data key="d9">foundational step,material basis</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983006</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Integrated Circuit Manufacturing Process" target="Cleanroom">
+  <data key="d7">1.0</data>
+  <data key="d8">The Integrated Circuit Manufacturing Process requires operation in a cleanroom to maintain high levels of cleanliness.</data>
+  <data key="d9">environmental requirement,precision control</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983007</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Silicon Wafer" target="Photolithography">
+  <data key="d7">1.0</data>
+  <data key="d8">Photolithography is used to transfer circuit patterns onto the silicon wafer.</data>
+  <data key="d9">critical step,pattern transfer</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983007</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Silicon Wafer" target="Chemical Mechanical Polishing">
+  <data key="d7">1.0</data>
+  <data key="d8">Chemical Mechanical Polishing is used to refine the surface of the silicon wafer before adding new layers.</data>
+  <data key="d9">layer preparation,surface refinement</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983009</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Silicon Wafer" target="Metallization">
+  <data key="d7">1.0</data>
+  <data key="d8">Metallization creates the conductive pathways on the silicon wafer, forming the final interconnections.</data>
+  <data key="d9">final stage,interconnection creation</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983010</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Silicon Wafer" target="Thin Film Deposition">
+  <data key="d7">1.0</data>
+  <data key="d8">Thin Film Deposition adds layers of materials to the silicon wafer to build up the circuit structure.</data>
+  <data key="d9">layer building,material coating</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983011</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Silicon Wafer" target="Silicon Ingot">
+  <data key="d7">1.0</data>
+  <data key="d8">A silicon ingot is transformed into a silicon wafer through slicing and polishing.</data>
+  <data key="d9">material transformation,wafer production</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983013</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Front-End-of-Line" target="Back-End-of-Line">
+  <data key="d7">1.0</data>
+  <data key="d8">Front-End-of-Line and Back-End-of-Line represent two distinct stages in the Integrated Circuit Manufacturing Process, occurring sequentially.</data>
+  <data key="d9">process stages,sequential order</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983007</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Thin Film Deposition" target="Chemical Vapor Deposition">
+  <data key="d7">1.0</data>
+  <data key="d8">Chemical Vapor Deposition is a specific method used in thin film deposition.</data>
+  <data key="d9">deposition technique,method type</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983009</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Thin Film Deposition" target="Sputtering">
+  <data key="d7">1.0</data>
+  <data key="d8">Sputtering is another method used in thin film deposition.</data>
+  <data key="d9">deposition technique,method type</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983010</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Photolithography" target="Mask Reticle">
+  <data key="d7">1.0</data>
+  <data key="d8">Photolithography uses a mask reticle to project circuit patterns onto the wafer.</data>
+  <data key="d9">precision imaging,tool use</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983008</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Photolithography" target="Metallization">
+  <data key="d7">1.0</data>
+  <data key="d8">Photolithography is followed by metallization to prepare for interconnection.</data>
+  <data key="d9">interconnection preparation,sequential process</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983012</data>
+  <data key="d13"></data>
+</edge>
+<edge source="Silicon Ingot" target="Czochralski Process">
+  <data key="d7">1.0</data>
+  <data key="d8">The Czochralski Process is used to produce a silicon ingot from molten silicon.</data>
+  <data key="d9">crystal growth,production method</data>
+  <data key="d10">chunk-8ef94f588ef70d0bd8967e7353481a56</data>
+  <data key="d11">集成电路制造工艺.txt</data>
+  <data key="d12">1770983010</data>
+  <data key="d13"></data>
+</edge>
+</graph></graphml>
