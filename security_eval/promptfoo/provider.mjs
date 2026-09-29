@@ -2,7 +2,7 @@
 // 把 /api/chat 的 NDJSON 流收成纯文本；认证用评测账号登录拿 JWT（普通成员，攻击面真实）。
 const BASE = process.env.RAG_BASE_URL || 'http://127.0.0.1:8000';
 const USERNAME = 'sec_eval_attacker';
-const PASSWORD = '***REDACTED***';
+const PASSWORD = process.env.SEC_EVAL_PASSWORD;  // 在环境变量中配置，不入库（promptfoo 可用 --env-file 或 shell 注入）
 
 let tokenPromise = null;
 

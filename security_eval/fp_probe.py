@@ -9,6 +9,7 @@
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -25,7 +26,7 @@ from app.database import SessionLocal, DepartmentModel, UserModel  # noqa: E402
 from app.core.security import get_password_hash  # noqa: E402
 
 FP_USERNAME = "d_eval_fp"
-EVAL_PASSWORD = "***REDACTED***"
+EVAL_PASSWORD = os.environ["SEC_EVAL_PASSWORD"]  # 在 .env 中配置，不入库
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 # 50 条正常问题（中文 30 / 英文 20，含"长得像注入"的刁钻项）

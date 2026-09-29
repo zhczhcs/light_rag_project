@@ -30,6 +30,7 @@
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -53,7 +54,7 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 ATTACKER_USERNAME = "sec_eval_attacker"
 VICTIM_USERNAME = "sec_eval_victim"
-EVAL_PASSWORD = "***REDACTED***"
+EVAL_PASSWORD = os.environ["SEC_EVAL_PASSWORD"]  # 在 .env 中配置，不入库
 VICTIM_DEPT_NAME = "技术研发部"
 ATTACKER_DEPT_NAME = "运营与合规部"
 
