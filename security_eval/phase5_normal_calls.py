@@ -21,6 +21,7 @@
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -39,7 +40,7 @@ TOOL_LOG_PATH = Path(__file__).resolve().parent / "tool_calls.jsonl"
 
 ADMIN_USERNAME = "e_eval_admin"
 MEMBER_USERNAME = "e_eval_member"
-EVAL_PASSWORD = "***REDACTED***"
+EVAL_PASSWORD = os.environ["E_EVAL_PASSWORD"]  # 在 .env 中配置，不入库
 ADMIN_DEPT_NAME = "技术研发部"
 MEMBER_DEPT_NAME = "运营与合规部"
 

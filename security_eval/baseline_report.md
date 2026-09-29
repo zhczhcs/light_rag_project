@@ -104,7 +104,7 @@ python security_eval/run_cross_tenant_baseline.py out.json       # 第 3 类代�
   （第 4 类分轮 68.75%~81.25%），报告以分轮 + 合并两种口径呈现。
 - **429 退避重试**：HTTP 429/5xx 或流内限流错误按 5s/10s/20s 重试（kimi 有速率限制）；
   400（Arrearage 等）不重试。本轮实际未触发 429（delay=3s 下单样本 ~7-40s，自然错峰）。
-- 评测账号：`sec_eval_victim`（技术研发部）、`sec_eval_attacker`（运营与合规部），密码 `***REDACTED***`。
+- 评测账号：`sec_eval_victim`（技术研发部）、`sec_eval_attacker`（运营与合规部），密码不入库，见 `.env` 的 `SEC_EVAL_PASSWORD`。
 
 ## 5. 第 3 类跨租户攻击：修复前 100% → 修复后 0%（真实数字，本次未重跑）
 
