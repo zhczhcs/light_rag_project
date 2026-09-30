@@ -184,10 +184,20 @@ _MAX_RERANK_CHUNKS = int(os.environ.get("QUERY_CHUNK_TOP_K", "6"))  # Rerank 后
 # ── 双渠道配置：LLM 走 ALI_*（可指向任何 OpenAI 兼容服务），Embedding/Rerank 走 DASHSCOPE_*（未设置时回退 ALI_*，兼容旧配置）──
 _DASHSCOPE_API_KEY = os.environ.get("DASHSCOPE_API_KEY") or os.environ.get("ALI_API_KEY")
 _DASHSCOPE_BASE_URL = os.environ.get("DASHSCOPE_BASE_URL") or os.environ.get("ALI_BASE_URL")
+# Rerank 独立鉴权：RERANK_API_KEY 可让 rerank 与 embedding 走不同渠道/密钥
+# （Phase4 实测：阿里云 embedding 模型授权失效(403) → embedding 切 Kimi bge-m3(1024d)，
+#   但 Kimi 无 rerank 接口 → rerank 仍走阿里云 qwen3.7-rerank 且独立密钥）
+_RERANK_API_KEY = os.environ.get("RERANK_API_KEY") or _DASHSCOPE_API_KEY
+# Embedding 维度：bge-m3=1024 / text-embedding-v4=1536，按渠道配置（默认保持项目原值 1536）
+EMBEDDING_DIM = int(os.environ.get("EMBEDDING_DIM", "1536"))
 
 # ── 参考文献过滤上下文变量 ──
 # 使用 contextvars 保证 asyncio 并发安全
 _need_references_var = contextvars.ContextVar('need_references', default=True)
+
+# 启动即打印生效的向量库配置（排障：确认进程级 env 是否加载了 EMBEDDING_DIM 等）
+print("🔧 [Engine] EMBEDDING_DIM=" + os.environ.get("EMBEDDING_DIM", "1536(默认)")
+      + " EMBEDDING_MODEL=" + os.environ.get("EMBEDDING_MODEL", "未设置"))
 
 def set_need_references_flag(flag: bool):
     """设置是否需要参考文献切片的标志。由 chat.py 在调用 aquery 前设置。"""
@@ -506,7 +516,7 @@ async def bailian_llm(prompt, system_prompt=None, history_messages=[], **kwargs)
 # ==========================================
 # 阿里云 text-embedding-v3/v4 API 限制：单次最多 10 条文本
 EMBEDDING_BATCH_SIZE = 10
-EMBEDDING_DIM = 1536
+# EMBEDDING_DIM 在模块头部双渠道配置区定义（env 可调：bge-m3=1024 / text-embedding-v4=1536）
 
 
 async def _embed_batch(client, batch_texts: list[str], model_name: str) -> list:
@@ -637,14 +647,17 @@ def get_rag_engine():
         llm_model_func=bailian_llm,
         llm_model_max_async=6,   # 默认 4，提升到 6 让多 chunk 并行提取，对大文档有明显收益
         embedding_func=EmbeddingFunc(
-            embedding_dim=1536,
+            embedding_dim=EMBEDDING_DIM,
             max_token_size=8192,
+            # model_name 参与 Qdrant collection 命名（lightrag_vdb_{ns}_{model}_{dim}d），
+            # 换 embedding 模型/维度时自动隔离新库，不动旧数据
+            model_name=os.environ.get("EMBEDDING_MODEL", "unknown"),
             func=bailian_embedding,
         ),
         # 🔄 Rerank：用阿里云 qwen3-rerank 对检索结果重排序，高分 chunk 排前面
         rerank_model_func=partial(
             _logged_rerank,
-            api_key=_DASHSCOPE_API_KEY,
+            api_key=_RERANK_API_KEY,
             model=_RERANK_MODEL,
             base_url=_RERANK_BASE_URL,
         ),
@@ -701,13 +714,14 @@ def _create_engine_for_workspace(workspace: str) -> LightRAG:
         llm_model_func=bailian_llm,
         llm_model_max_async=6,
         embedding_func=EmbeddingFunc(
-            embedding_dim=1536,
+            embedding_dim=EMBEDDING_DIM,
             max_token_size=8192,
+            model_name=os.environ.get("EMBEDDING_MODEL", "unknown"),
             func=bailian_embedding,
         ),
         rerank_model_func=partial(
             _logged_rerank,
-            api_key=_DASHSCOPE_API_KEY,
+            api_key=_RERANK_API_KEY,
             model=_RERANK_MODEL,
             base_url=_RERANK_BASE_URL,
         ),
