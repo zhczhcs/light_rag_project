@@ -97,6 +97,28 @@ INJECTION_RULES: list[tuple[str, re.Pattern]] = [
 ]
 
 # ---------------------------------------------------------------------------
+# 检索审计规则（仅用于 retrieval 扫描的"标记+记录"层，不门禁 —— 可以比输入规则宽：
+# 误报代价只是多一条审计日志；输入门禁规则必须窄，防误杀合法工具请求）
+# ---------------------------------------------------------------------------
+AUDIT_RULES: list[tuple[str, re.Pattern]] = [
+    ("pseudo_system_marker_en", re.compile(r"\[(SYSTEM NOTICE|IMPORTANT INSTRUCTION|ADMIN INSTRUCTION|SYSTEM INSTRUCTION)\]", re.IGNORECASE)),
+    ("pseudo_system_marker_zh", re.compile(r"【(系统通知|紧急指令|重要通知|管理员指令|系统指令)】")),
+    ("tool_invocation_in_doc_en",
+     re.compile(r"(?i)(immediately|then|and)\s+(call|invoke|execute|use)\s+(export_department_data|send_email|delete_document)")),
+    ("tool_invocation_in_doc_zh",
+     re.compile(r"(调用|执行|使用)\s*(export_department_data|send_email|delete_document)")),
+    ("ignore_instructions_en",
+     re.compile(r"ignore\s+(all|any|the|previous|prior|above)[\w ]{0,25}instructions", re.IGNORECASE)),
+    ("ignore_instructions_zh",
+     re.compile(r"忽略[^。；\n]{0,12}(之前|以上|先前|所有|此前)(收到|的)?[^。；\n]{0,8}(指令|指示|规则|限制|要求)")),
+    ("reveal_system_prompt_en",
+     re.compile(r"(print|output|reveal|show|repeat|dump|translate|recite|send)\b[\w \-]{0,40}"
+                r"\b(system|initial|hidden|developer|first)\s*[- ]?prompt", re.IGNORECASE)),
+    ("reveal_system_prompt_zh",
+     re.compile(r"(输出|打印|给出|复述|翻译|透露|展示|发给我|原样)[^。；\n]{0,15}(系统|初始|完整)?(的)?提示词")),
+]
+
+# ---------------------------------------------------------------------------
 # PII 规则（输出侧脱敏）：手机号 / 身份证 / 邮箱
 # ---------------------------------------------------------------------------
 PII_RULES: list[tuple[str, re.Pattern, str]] = [
@@ -336,10 +358,14 @@ def _extract_untrusted_items(system_prompt: str) -> list[tuple[str, str, str]]:
 
 
 async def _scan_retrieval_items_async(items: list[tuple[str, str, str]], prompt_ref: str) -> None:
-    """后台执行检索内容分类扫描并写日志（不阻塞请求，不改写上下文）。"""
+    """后台执行检索内容分类扫描并写日志（不阻塞请求，不改写上下文）。
+
+    双层结构对齐输入扫描：分类器 + 注入规则层（英文盲区由规则兜底）。
+    """
     t0 = time.time()
     texts = [it[2] for it in items if it[2].strip()]
     confs: list[float] = []
+    rule_hits_per_item: list[list[str]] = []
     fail_open = False
     clf = _CNInjectionClassifier.get()
     if clf.ok and texts:
@@ -347,10 +373,15 @@ async def _scan_retrieval_items_async(items: list[tuple[str, str, str]], prompt_
         confs = [p[0] for p in preds]
     elif not clf.ok:
         fail_open = True
+    for t in texts:
+        rule_hits_per_item.append([n for n, rx in AUDIT_RULES if rx.search(t)]
+                                  or _match_injection_rules(t))
 
     flagged = [
-        {"kind": items[i][0], "ref": items[i][1], "conf": round(confs[i], 3)}
-        for i in range(len(confs)) if confs[i] >= BLOCK_THRESHOLD
+        {"kind": items[i][0], "ref": items[i][1], "conf": round(confs[i], 3) if i < len(confs) else None,
+         "rules": rule_hits_per_item[i] or None}
+        for i in range(len(texts))
+        if (i < len(confs) and confs[i] >= BLOCK_THRESHOLD) or rule_hits_per_item[i]
     ]
     if flagged:
         decision = "flagged"
@@ -365,6 +396,8 @@ async def _scan_retrieval_items_async(items: list[tuple[str, str, str]], prompt_
         "model_conf_max": round(max(confs), 3) if confs else None,
         "latency_ms": round((time.time() - t0) * 1000.0, 1),
         "fail_open": fail_open, "prompt_ref": prompt_ref,
+        # 排障：送检文本的头部摘要（确认扫描覆盖的是实际检索内容）
+        "item_heads": [t[:60] for t in texts[:12]] if os.environ.get("GUARD_DEBUG_ITEMS") == "1" else None,
     })
 
 
