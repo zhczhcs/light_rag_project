@@ -60,6 +60,10 @@ from app.services.mock_tools import MOCK_TOOL_REGISTRY, execute_mock_tool, recor
 _RATE_LIMIT_MAX = int(os.environ.get("TOOL_GATEWAY_RATE_LIMIT_MAX", "5"))
 _RATE_LIMIT_WINDOW_SEC = int(os.environ.get("TOOL_GATEWAY_RATE_LIMIT_WINDOW_SEC", "600"))
 
+# 会话级工具调用总预算：单会话窗口内所有工具的真实执行总数上限（超限熔断，防 Agent 循环失控）
+_SESSION_BUDGET_MAX = int(os.environ.get("TOOL_GATEWAY_SESSION_BUDGET_MAX", "10"))
+_SESSION_BUDGET_WINDOW_SEC = int(os.environ.get("TOOL_GATEWAY_SESSION_BUDGET_WINDOW_SEC", "3600"))
+
 # 待确认意图有效期（秒）
 _PENDING_TTL_SEC = int(os.environ.get("TOOL_GATEWAY_PENDING_TTL_SEC", "600"))
 
@@ -84,7 +88,7 @@ _CANCEL_PHRASES = {
 }
 
 # 校验链每一步的名字（顺序即短路顺序）
-_CHECK_NAMES = ("identity", "role", "schema", "scope", "rate_limit")
+_CHECK_NAMES = ("identity", "role", "schema", "scope", "rate_limit", "session_budget")
 
 
 # ============================================================
@@ -241,6 +245,47 @@ class _ToolRateLimiter:
 _rate_limiter = _ToolRateLimiter(_RATE_LIMIT_MAX, _RATE_LIMIT_WINDOW_SEC)
 
 
+class _SessionBudgetLimiter:
+    """会话级总预算：key=(user_id, session_id)，统计窗口内所有工具的真实执行总数。"""
+
+    def __init__(self, max_calls: int, window_sec: int):
+        self._max = max_calls
+        self._window = window_sec
+        self._lock = threading.Lock()
+        self._hits: dict[tuple[int, int], list[float]] = {}
+
+    def _key(self, user: dict, session_id) -> tuple[int, int]:
+        try:
+            uid = int(user.get("id") or 0)
+        except (TypeError, ValueError):
+            uid = 0
+        try:
+            sid = int(session_id or 0)
+        except (TypeError, ValueError):
+            sid = 0
+        return (uid, sid)
+
+    def check(self, user: dict, session_id) -> bool:
+        """纯检查，不消耗预算。"""
+        now = time.monotonic()
+        key = self._key(user, session_id)
+        with self._lock:
+            hits = [t for t in self._hits.get(key, []) if now - t < self._window]
+            return len(hits) < self._max
+
+    def consume(self, user: dict, session_id) -> None:
+        """真实执行成功后记账。"""
+        now = time.monotonic()
+        key = self._key(user, session_id)
+        with self._lock:
+            hits = [t for t in self._hits.get(key, []) if now - t < self._window]
+            hits.append(now)
+            self._hits[key] = hits
+
+
+_session_budget = _SessionBudgetLimiter(_SESSION_BUDGET_MAX, _SESSION_BUDGET_WINDOW_SEC)
+
+
 # ============================================================
 # 4. 待确认意图存储（内存，key=(user_id, session_id)，TTL）
 # ============================================================
@@ -367,6 +412,7 @@ def _execute_allow(tool_name: str, params: dict, user: dict, session_id, checks:
     receipt = result.get("receipt") if isinstance(result, dict) else None
     if result.get("status") == "mock_success":
         _rate_limiter.consume(user["username"], tool_name)
+        _session_budget.consume(user, session_id)
 
     out = {
         "decision": "allow",
@@ -492,6 +538,14 @@ def gate_tool_call(intent: dict, user_context: dict | None = None, session_id=No
         return _deny(
             f"调用次数超限：{_RATE_LIMIT_WINDOW_SEC}s 内最多 {_RATE_LIMIT_MAX} 次",
             "rate_limit",
+        )
+
+    # —— 5b. 会话级工具调用总预算（防 Agent 循环失控的硬熔断；预览不耗预算）——
+    checks["session_budget"] = "pass" if _session_budget.check(user, session_id) else "fail"
+    if checks["session_budget"] == "fail":
+        return _deny(
+            f"会话工具预算耗尽：{_SESSION_BUDGET_WINDOW_SEC}s 内本会话最多执行 {_SESSION_BUDGET_MAX} 次工具调用",
+            "session_budget",
         )
 
     # —— 6. 高风险：预览→确认→执行；其余风险等级直通 ——
