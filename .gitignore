@@ -71,3 +71,12 @@ wrapper_src.txt
 
 # Backup files
 *.bak
+
+# 防呆：嵌套副本/缓存/密钥
+LightRAG_Project/
+__pycache__/
+*.pyc
+*.bak
+.env
+.env.*
+!.env.example
